@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}Experiment 4: Diffie–Hellman Key Exchange{% endblock %}
+{% block page_title %}Experiment 4: Diffie–Hellman Key Exchange & HKDF{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}" class="text-muted text-decoration-none">Laboratories</a></li>
+<li class="breadcrumb-item active text-cyan" aria-current="page">Diffie–Hellman</li>
+{% endblock %}
+
+{% block content %}
+<div class="cyber-card mb-4 p-3 bg-navy-light">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div>
+      <span class="badge bg-info text-dark fw-bold me-2">SYLLABUS EXP 4</span>
+      <span class="text-white fw-bold">Modular Exponentiation, Ephemeral Key Negotiation, and HKDF-SHA256 Key Derivation</span>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-sm btn-cyber-primary" onclick="runCryptoExchange()">
+        <i class="bi bi-play-circle me-1"></i> Run Cryptographic Exchange (2048-bit)
+      </button>
+      <button class="btn btn-sm btn-cyber-outline" onclick="runEducationalTrace()">
+        <i class="bi bi-book me-1"></i> Small Integer Math Walkthrough
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Participant Flow Architecture -->
+<div class="row g-4 mb-4">
+  <!-- Alice -->
+  <div class="col-lg-5">
+    <div class="cyber-card p-4 border-teal h-100">
+      <div class="d-flex align-items-center mb-3">
+        <div class="p-2 rounded bg-navy-light text-cyan border border-teal me-3">
+          <i class="bi bi-person-fill fs-3"></i>
+        </div>
+        <div>
+          <h5 class="fw-bold text-white mb-0">Alice (Initiator)</h5>
+          <small class="text-muted">Generates ephemeral private secret <code class="text-cyan">a</code></small>
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Alice's Public Key A = g<sup>a</sup> mod p</label>
+        <textarea id="alice-pub-key" class="form-control font-monospace" rows="3" readonly placeholder="Alice's public key preview..."></textarea>
+      </div>
+      <div class="p-2 rounded bg-navy-light border border-subtle mb-3" style="font-size: 0.8rem;">
+        <i class="bi bi-shield-check text-success me-1"></i> Private exponent <code>a</code> is retained strictly in Alice's local memory.
+      </div>
+      <div class="mb-2">
+        <label class="form-label">Calculated Secret S<sub>Alice</sub> = B<sup>a</sup> mod p</label>
+        <input type="text" id="alice-secret-preview" class="form-control font-monospace text-teal" readonly placeholder="Calculated secret...">
+      </div>
+    </div>
+  </div>
+
+  <!-- Center Insecure Channel & MitM Warning -->
+  <div class="col-lg-2 d-flex flex-column justify-content-center align-items-center text-center">
+    <div class="p-3 my-2 rounded bg-navy-light border border-subtle w-100 shadow-sm">
+      <i class="bi bi-globe2 text-warning fs-3 mb-1 d-block"></i>
+      <span class="fw-bold text-white fs-7">Public Wire</span>
+      <div class="text-dim" style="font-size: 0.7rem;">Insecure Channel</div>
+      <div class="my-2 border-top border-secondary"></div>
+      <div class="text-cyan font-monospace" style="font-size: 0.75rem;">A &xrarr; Bob</div>
+      <div class="text-teal font-monospace" style="font-size: 0.75rem;">B &xlarr; Alice</div>
+    </div>
+  </div>
+
+  <!-- Bob -->
+  <div class="col-lg-5">
+    <div class="cyber-card p-4 border-teal h-100">
+      <div class="d-flex align-items-center mb-3">
+        <div class="p-2 rounded bg-navy-light text-teal border border-teal me-3">
+          <i class="bi bi-person-fill fs-3"></i>
+        </div>
+        <div>
+          <h5 class="fw-bold text-white mb-0">Bob (Responder)</h5>
+          <small class="text-muted">Generates ephemeral private secret <code class="text-teal">b</code></small>
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Bob's Public Key B = g<sup>b</sup> mod p</label>
+        <textarea id="bob-pub-key" class="form-control font-monospace" rows="3" readonly placeholder="Bob's public key preview..."></textarea>
+      </div>
+      <div class="p-2 rounded bg-navy-light border border-subtle mb-3" style="font-size: 0.8rem;">
+        <i class="bi bi-shield-check text-success me-1"></i> Private exponent <code>b</code> is retained strictly in Bob's local memory.
+      </div>
+      <div class="mb-2">
+        <label class="form-label">Calculated Secret S<sub>Bob</sub> = A<sup>b</sup> mod p</label>
+        <input type="text" id="bob-secret-preview" class="form-control font-monospace text-teal" readonly placeholder="Calculated secret...">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Shared Secret Verification & HKDF Derivation Card -->
+<div class="cyber-card p-4 mb-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="fw-bold text-white mb-0"><i class="bi bi-patch-check me-2 text-success"></i>Shared Secret Verification & HKDF-SHA256 Derivation</h5>
+    <span id="dh-match-badge" class="badge bg-success bg-opacity-25 text-success border border-success">S_Alice == S_Bob Verified</span>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-md-6">
+      <label class="form-label">Independent Secret Match</label>
+      <div class="p-3 rounded bg-navy-light border border-subtle font-monospace text-cyan" id="dh-secret-match-view">
+        Both parties independently calculated identical 256-byte secrets across the insecure channel!
+      </div>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Derived Symmetric Session Key (HKDF-SHA256)</label>
+      <div class="p-3 rounded bg-navy-light border border-teal font-monospace text-warning" id="dh-derived-key-view">
+        Ready for AES-256 session encryption...
+      </div>
+    </div>
+  </div>
+
+  <div class="alert alert-danger bg-danger bg-opacity-10 border-0 text-danger p-3 mb-0" style="font-size: 0.85rem;">
+    <i class="bi bi-exclamation-octagon-fill me-2 fs-5 align-middle"></i>
+    <strong>Authentication Vulnerability Notice:</strong> Diffie-Hellman establishes confidentiality but offers zero authentication. An active adversary (Eve) can perform a <strong>Man-in-the-Middle (MitM)</strong> attack by intercepting <code>A</code> and <code>B</code> and establishing separate session keys with both parties unless authenticated using certificates or digital signatures (e.g., ECDHE in TLS 1.3).
+  </div>
+</div>
+
+<!-- Educational Small-Integer Math Trace -->
+<div class="cyber-card p-4">
+  <h5 class="fw-bold text-white mb-3"><i class="bi bi-journal-code me-2 text-cyan"></i>Textbook Mathematical Walkthrough (Small Primes Sandbox)</h5>
+  <div class="row g-3 mb-3">
+    <div class="col-sm-3">
+      <label class="form-label">Prime Modulus (p)</label>
+      <input type="number" id="math-p" class="form-control font-monospace" value="23">
+    </div>
+    <div class="col-sm-3">
+      <label class="form-label">Generator Base (g)</label>
+      <input type="number" id="math-g" class="form-control font-monospace" value="5">
+    </div>
+    <div class="col-sm-3">
+      <label class="form-label">Alice Secret (a)</label>
+      <input type="number" id="math-a" class="form-control font-monospace" value="6">
+    </div>
+    <div class="col-sm-3">
+      <label class="form-label">Bob Secret (b)</label>
+      <input type="number" id="math-b" class="form-control font-monospace" value="15">
+    </div>
+  </div>
+  <div class="d-flex justify-content-end mb-3">
+    <button id="btn-run-trace" class="btn btn-sm btn-cyber-primary" onclick="runEducationalTrace()">
+      <i class="bi bi-play me-1"></i> Calculate Step-by-Step Proof
+    </button>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-cyber table-sm mb-0">
+      <thead>
+        <tr>
+          <th>Step</th>
+          <th>Phase Title</th>
+          <th>Mathematical Operation & Explanation</th>
+          <th>Transmitted / Result</th>
+        </tr>
+      </thead>
+      <tbody id="math-trace-steps-body">
+        <tr>
+          <td colspan="4" class="text-center text-muted py-3">Click 'Calculate Step-by-Step Proof' to evaluate textbook numbers.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function runCryptoExchange() {
+  try {
+    const res = await apiCall('{{ url_for("dh.simulate_exchange") }}', { key_size: 2048 });
+    const d = res.data;
+    document.getElementById('alice-pub-key').value = d.alice.public_key_preview;
+    document.getElementById('bob-pub-key').value = d.bob.public_key_preview;
+    document.getElementById('alice-secret-preview').value = d.exchange_verification.shared_secret_preview;
+    document.getElementById('bob-secret-preview').value = d.exchange_verification.shared_secret_preview;
+    document.getElementById('dh-derived-key-view').innerText = d.exchange_verification.derived_symmetric_key_hex;
+    document.getElementById('dh-match-badge').innerText = `Secrets Match: ${d.exchange_verification.secrets_match}`;
+    showToast('Diffie-Hellman exchange verified with HKDF-SHA256 key derivation!', 'success');
+  } catch (e) {}
+}
+
+async function runEducationalTrace() {
+  const btn = document.getElementById('btn-run-trace');
+  const p = document.getElementById('math-p').value;
+  const g = document.getElementById('math-g').value;
+  const a = document.getElementById('math-a').value;
+  const b = document.getElementById('math-b').value;
+
+  try {
+    const res = await apiCall('{{ url_for("dh.educational_trace") }}', { p: p, g: g, a: a, b: b }, btn);
+    const tbody = document.getElementById('math-trace-steps-body');
+    tbody.innerHTML = '';
+    res.data.steps.forEach(s => {
+      tbody.innerHTML += `<tr>
+        <td class="text-cyan fw-bold">Step ${s.step}</td>
+        <td class="text-white fw-medium">${s.title}</td>
+        <td class="font-monospace text-dim" style="font-size:0.8rem;">${s.description}</td>
+        <td class="font-monospace text-warning fw-bold">${s.transmitted || s.result || 'Agreed'}</td>
+      </tr>`;
+    });
+    showToast('Educational math trace calculated!', 'info');
+  } catch (e) {}
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  runCryptoExchange();
+  runEducationalTrace();
+});
+</script>
+{% endblock %}

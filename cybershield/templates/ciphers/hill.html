@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+{% block title %}Experiment 2: Hill Cipher Lab{% endblock %}
+{% block page_title %}Experiment 2: Hill Cipher (Matrix Polygraphic Substitution){% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}" class="text-muted text-decoration-none">Laboratories</a></li>
+<li class="breadcrumb-item active text-cyan" aria-current="page">Hill Cipher</li>
+{% endblock %}
+
+{% block content %}
+<div class="cyber-card mb-4 p-3 bg-navy-light">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div>
+      <span class="badge bg-info text-dark fw-bold me-2">SYLLABUS EXP 2</span>
+      <span class="text-white fw-bold">Modular Matrix Inversion & Vector Arithmetic (Modulo 26)</span>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-sm btn-outline-light" onclick="loadPreset('2x2_valid')">Load Valid 2x2</button>
+      <button class="btn btn-sm btn-outline-danger" onclick="loadPreset('2x2_invalid')">Test Non-Invertible Key</button>
+      <button class="btn btn-sm btn-outline-light" onclick="loadPreset('3x3_valid')">Load Valid 3x3</button>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Left Column: Key Matrix & Input -->
+  <div class="col-lg-5">
+    <div class="cyber-card p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-white mb-0"><i class="bi bi-grid-3x3 me-2 text-cyan"></i>Key Matrix Specification</h5>
+        <div class="btn-group btn-group-sm" role="group">
+          <input type="radio" class="btn-check" name="matrixSize" id="size2" value="2" checked onchange="switchDimension(2)">
+          <label class="btn btn-outline-info" for="size2">2x2</label>
+          <input type="radio" class="btn-check" name="matrixSize" id="size3" value="3" onchange="switchDimension(3)">
+          <label class="btn btn-outline-info" for="size3">3x3</label>
+        </div>
+      </div>
+
+      <!-- Matrix Inputs -->
+      <div id="matrix-container" class="mb-3">
+        <div class="row g-2 mb-2" id="matrix-row-0">
+          <div class="col"><input type="number" id="m00" class="form-control text-center font-monospace" value="3"></div>
+          <div class="col"><input type="number" id="m01" class="form-control text-center font-monospace" value="3"></div>
+          <div class="col d-none" id="col-02"><input type="number" id="m02" class="form-control text-center font-monospace" value="1"></div>
+        </div>
+        <div class="row g-2 mb-2" id="matrix-row-1">
+          <div class="col"><input type="number" id="m10" class="form-control text-center font-monospace" value="2"></div>
+          <div class="col"><input type="number" id="m11" class="form-control text-center font-monospace" value="5"></div>
+          <div class="col d-none" id="col-12"><input type="number" id="m12" class="form-control text-center font-monospace" value="10"></div>
+        </div>
+        <div class="row g-2 d-none" id="matrix-row-2">
+          <div class="col"><input type="number" id="m20" class="form-control text-center font-monospace" value="20"></div>
+          <div class="col"><input type="number" id="m21" class="form-control text-center font-monospace" value="17"></div>
+          <div class="col"><input type="number" id="m22" class="form-control text-center font-monospace" value="15"></div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 mb-4">
+        <button id="btn-validate-matrix" class="btn btn-sm btn-cyber-outline flex-grow-1" onclick="validateMatrix()">
+          <i class="bi bi-patch-check me-1"></i> Verify Invertibility Mod 26
+        </button>
+      </div>
+
+      <!-- Text Inputs -->
+      <div class="mb-3">
+        <label class="form-label">Message String (Letters A-Z)</label>
+        <input type="text" id="hill-text" class="form-control font-monospace" value="HELP" placeholder="Enter plaintext or ciphertext...">
+        <small class="text-muted" style="font-size: 0.75rem;">Text will be normalized to uppercase and padded with 'X' to match matrix dimension.</small>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button id="btn-hill-encrypt" class="btn btn-cyber-primary flex-grow-1" onclick="executeHill('encrypt')">
+          <i class="bi bi-lock me-1"></i> Encrypt
+        </button>
+        <button id="btn-hill-decrypt" class="btn btn-cyber-outline flex-grow-1" onclick="executeHill('decrypt')">
+          <i class="bi bi-unlock me-1"></i> Decrypt
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column: Mathematics & Results -->
+  <div class="col-lg-7">
+    <div class="cyber-card p-4 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-white mb-0"><i class="bi bi-calculator me-2 text-cyan"></i>Modular Matrix Arithmetic Trace</h5>
+        <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('hill-output-text')">
+          <i class="bi bi-clipboard"></i> Copy
+        </button>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Output Text</label>
+        <input type="text" id="hill-output-text" class="form-control font-monospace text-success fw-bold fs-5" readonly placeholder="Result will appear here...">
+      </div>
+
+      <!-- Invertibility & Matrix Details Card -->
+      <div id="hill-matrix-info" class="p-3 rounded bg-navy-light border border-subtle mb-3">
+        <div class="row g-3">
+          <div class="col-sm-6">
+            <div class="text-dim text-uppercase fs-8 fw-semibold">Determinant (mod 26)</div>
+            <div id="info-det" class="fs-6 fw-bold text-white font-monospace">--</div>
+            <div id="info-det-inv" class="text-muted" style="font-size: 0.8rem;">det<sup>-1</sup>: --</div>
+          </div>
+          <div class="col-sm-6">
+            <div class="text-dim text-uppercase fs-8 fw-semibold">Inverse Matrix K<sup>-1</sup></div>
+            <div id="info-inv-matrix" class="font-monospace text-teal" style="font-size: 0.85rem;">[ Verify matrix to view ]</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vector Calculation Steps -->
+      <label class="form-label">Vector Multiplication Steps [ C = (K &middot; P) mod 26 ]</label>
+      <div id="hill-steps-container" class="table-responsive" style="max-height: 240px; overflow-y: auto;">
+        <table class="table table-cyber table-sm mb-0">
+          <thead>
+            <tr>
+              <th>Block #</th>
+              <th>Input Vector</th>
+              <th>Matrix &times; Vector Calculation</th>
+              <th>Output Block</th>
+            </tr>
+          </thead>
+          <tbody id="hill-steps-body">
+            <tr>
+              <td colspan="4" class="text-center text-muted py-3">Run encryption or decryption to inspect vector calculations.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let currentDim = 2;
+
+function switchDimension(dim) {
+  currentDim = dim;
+  if (dim === 2) {
+    document.getElementById('col-02').classList.add('d-none');
+    document.getElementById('col-12').classList.add('d-none');
+    document.getElementById('matrix-row-2').classList.add('d-none');
+  } else {
+    document.getElementById('col-02').classList.remove('d-none');
+    document.getElementById('col-12').classList.remove('d-none');
+    document.getElementById('matrix-row-2').classList.remove('d-none');
+  }
+}
+
+function getMatrixFromUI() {
+  if (currentDim === 2) {
+    return [
+      [parseInt(document.getElementById('m00').value) || 0, parseInt(document.getElementById('m01').value) || 0],
+      [parseInt(document.getElementById('m10').value) || 0, parseInt(document.getElementById('m11').value) || 0]
+    ];
+  } else {
+    return [
+      [parseInt(document.getElementById('m00').value) || 0, parseInt(document.getElementById('m01').value) || 0, parseInt(document.getElementById('m02').value) || 0],
+      [parseInt(document.getElementById('m10').value) || 0, parseInt(document.getElementById('m11').value) || 0, parseInt(document.getElementById('m12').value) || 0],
+      [parseInt(document.getElementById('m20').value) || 0, parseInt(document.getElementById('m21').value) || 0, parseInt(document.getElementById('m22').value) || 0]
+    ];
+  }
+}
+
+function setMatrixToUI(mat) {
+  if (mat.length === 2) {
+    switchDimension(2);
+    document.getElementById('size2').checked = true;
+    document.getElementById('m00').value = mat[0][0];
+    document.getElementById('m01').value = mat[0][1];
+    document.getElementById('m10').value = mat[1][0];
+    document.getElementById('m11').value = mat[1][1];
+  } else if (mat.length === 3) {
+    switchDimension(3);
+    document.getElementById('size3').checked = true;
+    document.getElementById('m00').value = mat[0][0];
+    document.getElementById('m01').value = mat[0][1];
+    document.getElementById('m02').value = mat[0][2];
+    document.getElementById('m10').value = mat[1][0];
+    document.getElementById('m11').value = mat[1][1];
+    document.getElementById('m12').value = mat[1][2];
+    document.getElementById('m20').value = mat[2][0];
+    document.getElementById('m21').value = mat[2][1];
+    document.getElementById('m22').value = mat[2][2];
+  }
+}
+
+function loadPreset(preset) {
+  if (preset === '2x2_valid') {
+    setMatrixToUI([[3, 3], [2, 5]]);
+    document.getElementById('hill-text').value = 'HELP';
+    showToast('Loaded valid 2x2 key: [[3, 3], [2, 5]]', 'info');
+  } else if (preset === '2x2_invalid') {
+    setMatrixToUI([[2, 4], [4, 6]]);
+    document.getElementById('hill-text').value = 'TEST';
+    showToast('Loaded non-invertible matrix (det mod 26 = 22 shares factor 2 with 26)', 'warning');
+  } else if (preset === '3x3_valid') {
+    setMatrixToUI([[6, 24, 1], [13, 16, 10], [20, 17, 15]]);
+    document.getElementById('hill-text').value = 'ACT';
+    showToast('Loaded valid 3x3 key matrix!', 'info');
+  }
+  validateMatrix();
+}
+
+async function validateMatrix() {
+  const btn = document.getElementById('btn-validate-matrix');
+  const mat = getMatrixFromUI();
+  try {
+    const res = await apiCall('{{ url_for("hill.validate_key") }}', { key_matrix: mat, size: currentDim }, btn);
+    document.getElementById('info-det').innerText = res.determinant_mod26;
+    document.getElementById('info-det-inv').innerText = `det⁻¹ mod 26: ${res.det_modular_inverse}`;
+    document.getElementById('info-inv-matrix').innerText = JSON.stringify(res.inverse_matrix);
+    showToast(res.message, 'success');
+  } catch (e) {
+    document.getElementById('info-det').innerText = 'INVALID';
+    document.getElementById('info-det-inv').innerText = 'det⁻¹: None';
+    document.getElementById('info-inv-matrix').innerText = '[ Matrix not invertible mod 26 ]';
+  }
+}
+
+async function executeHill(operation) {
+  const btn = document.getElementById(operation === 'encrypt' ? 'btn-hill-encrypt' : 'btn-hill-decrypt');
+  const endpoint = operation === 'encrypt' ? '{{ url_for("hill.encrypt") }}' : '{{ url_for("hill.decrypt") }}';
+  const text = document.getElementById('hill-text').value;
+  const mat = getMatrixFromUI();
+
+  const payload = {
+    plaintext: text,
+    ciphertext: text,
+    key_matrix: mat,
+    size: currentDim
+  };
+
+  try {
+    const res = await apiCall(endpoint, payload, btn);
+    const d = res.data;
+    document.getElementById('hill-output-text').value = operation === 'encrypt' ? d.ciphertext : d.recovered_plaintext;
+    document.getElementById('info-det').innerText = d.determinant_mod26;
+    document.getElementById('info-det-inv').innerText = `det⁻¹ mod 26: ${d.det_modular_inverse}`;
+    document.getElementById('info-inv-matrix').innerText = JSON.stringify(d.inverse_key_matrix);
+
+    const tbody = document.getElementById('hill-steps-body');
+    tbody.innerHTML = '';
+    d.steps.forEach(s => {
+      const calcLines = s.calculations.map(c => `<div>${c}</div>`).join('');
+      tbody.innerHTML += `<tr>
+        <td class="text-cyan fw-bold">#${s.block_index}</td>
+        <td class="font-monospace text-white">${s.plain_block || s.cipher_block} (${JSON.stringify(s.vector_p || s.vector_c)})</td>
+        <td class="font-monospace text-dim" style="font-size:0.75rem;">${calcLines}</td>
+        <td class="font-monospace text-success fw-bold">${s.cipher_block || s.plain_block}</td>
+      </tr>`;
+    });
+    showToast(`Hill Cipher ${operation} completed successfully!`, 'success');
+  } catch (e) {}
+}
+</script>
+{% endblock %}

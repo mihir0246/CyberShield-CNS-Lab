@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Experiment Execution History{% endblock %}
+{% block page_title %}Experiment Execution History & Audit Logs{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}" class="text-muted text-decoration-none">Laboratories</a></li>
+<li class="breadcrumb-item active text-cyan" aria-current="page">Experiment History</li>
+{% endblock %}
+
+{% block content %}
+<div class="cyber-card mb-4 p-3 bg-navy-light">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div>
+      <span class="badge bg-info text-dark fw-bold me-2">AUDIT PERSISTENCE</span>
+      <span class="text-white fw-bold">Permanent SQLite Record of Algorithmic Runs, Hash Benchmarks, Scans, and Telemetry</span>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('history.export_json') }}" class="btn btn-sm btn-cyber-outline">
+        <i class="bi bi-filetype-json me-1"></i> Export JSON
+      </a>
+      <a href="{{ url_for('history.export_csv') }}" class="btn btn-sm btn-cyber-outline">
+        <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export CSV
+      </a>
+      <button class="btn btn-sm btn-outline-danger" onclick="clearHistory()">
+        <i class="bi bi-trash me-1"></i> Clear Logs
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="cyber-card p-3 mb-4">
+  <form method="GET" action="{{ url_for('history.history_page') }}" class="row g-2 align-items-center">
+    <div class="col-sm-4">
+      <select name="type" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">All Experiment Categories</option>
+        {% for t in distinct_types %}
+        <option value="{{ t }}" {% if selected_type == t %}selected{% endif %}>{{ t }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-sm-8 text-sm-end text-muted" style="font-size: 0.8rem;">
+      Showing latest {{ runs | length }} persistent execution records.
+    </div>
+  </form>
+</div>
+
+<!-- History Table -->
+<div class="cyber-card p-4">
+  <div class="table-responsive">
+    <table class="table table-cyber mb-0">
+      <thead>
+        <tr>
+          <th>Run ID</th>
+          <th>Experiment Module</th>
+          <th>Title / Specific Operation</th>
+          <th>Execution Time</th>
+          <th>Status</th>
+          <th>Created Timestamp</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for run in runs %}
+        <tr>
+          <td class="font-monospace text-cyan fw-bold">#{{ run.id }}</td>
+          <td><span class="badge bg-navy-light text-info border border-info border-opacity-25">{{ run.experiment_type }}</span></td>
+          <td class="text-white fw-medium">{{ run.title }}</td>
+          <td class="text-muted font-monospace">{{ run.execution_time_ms }} ms</td>
+          <td>
+            <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50">{{ run.status }}</span>
+          </td>
+          <td class="text-dim font-monospace" style="font-size: 0.8rem;">
+            {{ run.created_at.strftime('%Y-%m-%d %H:%M:%S UTC') if run.created_at else '-' }}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" class="text-center text-muted py-4">
+            <i class="bi bi-inbox fs-3 d-block mb-1 text-dim"></i>
+            No laboratory executions recorded.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function clearHistory() {
+  if (!confirm('Are you sure you want to clear all experiment execution history and audit tables?')) return;
+  try {
+    await apiCall('{{ url_for("history.clear_history") }}', {}, null, 'POST');
+    showToast('Experiment logs successfully cleared!', 'info');
+    setTimeout(() => window.location.reload(), 1000);
+  } catch (e) {}
+}
+</script>
+{% endblock %}

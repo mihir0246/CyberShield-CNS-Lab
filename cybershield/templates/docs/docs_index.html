@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Laboratory Documentation & Practical Manual{% endblock %}
+{% block page_title %}Laboratory Documentation & Academic Deliverables{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}" class="text-muted text-decoration-none">Laboratories</a></li>
+<li class="breadcrumb-item active text-cyan" aria-current="page">Documentation</li>
+{% endblock %}
+
+{% block content %}
+<div class="cyber-card mb-4 p-3 bg-navy-light">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div>
+      <span class="badge bg-info text-dark fw-bold me-2">ACADEMIC DELIVERABLES</span>
+      <span class="text-white fw-bold">Comprehensive CNS Practical Manual, Architecture Reports, and Viva Voce Question Bank</span>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  {% for d in docs %}
+  <div class="col-lg-6">
+    <div class="cyber-card p-4 h-100 d-flex flex-column justify-content-between">
+      <div>
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <h5 class="fw-bold text-white mb-0">{{ d.title }}</h5>
+          <span class="badge bg-navy-light text-cyan border border-subtle">{{ d.size_kb }} KB</span>
+        </div>
+        <div class="font-monospace text-dim mb-3" style="font-size: 0.8rem;">docs/{{ d.filename }}</div>
+      </div>
+      <div>
+        <a href="{{ url_for('docs.view_doc', slug=d.slug) }}" class="btn btn-sm btn-cyber-primary w-100">
+          <i class="bi bi-book-half me-1"></i> Read Document
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

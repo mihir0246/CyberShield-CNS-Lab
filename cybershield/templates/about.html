@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}About CyberShield{% endblock %}
+{% block page_title %}About CyberShield: Integrated CNS Laboratory{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}" class="text-muted text-decoration-none">Laboratories</a></li>
+<li class="breadcrumb-item active text-cyan" aria-current="page">About Project</li>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="cyber-card p-4 mb-4">
+      <h4 class="fw-bold text-white mb-2"><i class="bi bi-shield-lock-fill text-teal me-2"></i>Project Overview</h4>
+      <p class="text-muted mb-3">
+        <strong>CyberShield</strong> is an enterprise-grade, academically presentable educational laboratory web platform designed specifically for the Cryptography and Network Security (CNS) laboratory curriculum in Computer Science and Cybersecurity Engineering programs.
+      </p>
+      <p class="text-muted mb-4">
+        Unlike static dashboards or disconnected script collections, CyberShield consolidates all 9 core practical experiments into a single cohesive platform featuring modular Flask Blueprints, real cryptographic libraries (`cryptography`, standard library `hashlib`), Scapy deep packet inspection, controlled Nmap subprocess wrappers with strict target whitelist guards, and Snort IDS rule/alert ingestion.
+      </p>
+
+      <h5 class="fw-bold text-white mb-3">Engineering Syllabus Mapping</h5>
+      <div class="table-responsive">
+        <table class="table table-cyber table-sm mb-0">
+          <thead>
+            <tr>
+              <th>Exp #</th>
+              <th>Laboratory Module</th>
+              <th>Primary Technology & Standard</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-cyan fw-bold">EXP 1</td>
+              <td>Classical Cryptographic Techniques</td>
+              <td>Caesar (Shift mod 26), Vernam One-Time Pad (XOR), Rail Fence (Transposition)</td>
+            </tr>
+            <tr>
+              <td class="text-cyan fw-bold">EXP 2</td>
+              <td>Hill Cipher</td>
+              <td>Matrix multiplication modulo 26, modular inverse matrix via extended Euclidean algorithm</td>
+            </tr>
+            <tr>
+              <td class="text-cyan fw-bold">EXP 3</td>
+              <td>RSA Public-Key Cryptosystem</td>
+              <td>RFC 8017 PKCS#1 v2.2 RSA-OAEP with SHA-256 and key size benchmarks</td>
+            </tr>
+            <tr>
+              <td class="text-cyan fw-bold">EXP 4</td>
+              <td>Diffie–Hellman Key Exchange</td>
+              <td>RFC 3526 MODP Group, HKDF-SHA256 (RFC 5869) key derivation, small-integer math trace</td>
+            </tr>
+            <tr>
+              <td class="text-cyan fw-bold">EXP 5</td>
+              <td>MD5 Hashing & Integrity Verification</td>
+              <td>MD5 vs SHA-256 empirical performance benchmark suite, collision vulnerability warnings</td>
+            </tr>
+            <tr>
+              <td class="text-cyan fw-bold">EXP 6</td>
+              <td>Wireshark & Packet Analysis</td>
+              <td>Scapy PCAP/PCAPNG parser, protocol distribution, top talkers, promiscuous mode guide</td>
+            </tr>
+            <tr>
+              <td class="text-cyan fw-bold">EXP 7</td>
+              <td>Nmap Network Scanning</td>
+              <td>Controlled subprocess wrapper, XML machine parser, target IP whitelisting</td>
+            </tr>
+            <tr>
+              <td class="text-cyan fw-bold">EXP 8</td>
+              <td>Controlled DoS Analysis</td>
+              <td>Synthetic volumetric queuing simulation, token-bucket defense, Hping3 study guide</td>
+            </tr>
+            <tr>
+              <td class="text-cyan fw-bold">EXP 9</td>
+              <td>Snort IDS Log & Rule Analyzer</td>
+              <td>Signature rule anatomy explainer, fast-alert log parser, CSV export</td>
+            </tr>
+            <tr>
+              <td class="text-cyan fw-bold">EXP 10</td>
+              <td>Cross-Lab Event Correlation</td>
+              <td>Temporal fusion engine connecting PCAP packets, Snort alerts, and scan discoveries</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="cyber-card p-4 mb-4">
+      <h5 class="fw-bold text-white mb-3"><i class="bi bi-code-square me-2 text-cyan"></i>Technology Stack</h5>
+      <ul class="list-unstyled text-muted mb-0" style="font-size: 0.85rem;">
+        <li class="mb-2"><strong class="text-white">Backend:</strong> Python 3.12+, Flask 3.1</li>
+        <li class="mb-2"><strong class="text-white">Database:</strong> SQLite with SQLAlchemy 2.1</li>
+        <li class="mb-2"><strong class="text-white">Frontend:</strong> Bootstrap 5.3, Bootstrap Icons, Chart.js</li>
+        <li class="mb-2"><strong class="text-white">Cryptography:</strong> Python standard library & `cryptography` 44.0</li>
+        <li class="mb-2"><strong class="text-white">Packet Analysis:</strong> Scapy 2.6.1</li>
+        <li class="mb-2"><strong class="text-white">Scanning:</strong> Nmap with safe argument validation</li>
+        <li class="mb-2"><strong class="text-white">Testing:</strong> Automated test suite with `pytest`</li>
+      </ul>
+    </div>
+
+    <div class="cyber-card p-4">
+      <h5 class="fw-bold text-white mb-2"><i class="bi bi-journal-bookmark me-2 text-teal"></i>Documentation</h5>
+      <p class="text-dim mb-3" style="font-size: 0.8rem;">
+        Complete lab manuals, viva questions, testing reports, and architecture diagrams are compiled in the <code>docs/</code> repository.
+      </p>
+      <a href="{{ url_for('docs.list_docs') }}" class="btn btn-cyber-primary w-100">
+        <i class="bi bi-book me-1"></i> Browse Laboratory Manual
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

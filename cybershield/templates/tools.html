@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Tool Diagnostics & System Health{% endblock %}
+{% block page_title %}External Security Tool Diagnostics & Environment Health{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}" class="text-muted text-decoration-none">Laboratories</a></li>
+<li class="breadcrumb-item active text-cyan" aria-current="page">Tool Diagnostics</li>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+  <!-- Nmap Card -->
+  <div class="col-lg-6">
+    <div class="cyber-card p-4 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex align-items-center">
+          <i class="bi bi-radar text-cyan fs-3 me-2"></i>
+          <div>
+            <h5 class="fw-bold text-white mb-0">Nmap Network Scanner</h5>
+            <small class="text-muted">Port scanner & service detection</small>
+          </div>
+        </div>
+        <span class="badge {{ 'bg-success' if nmap.installed else 'bg-warning text-dark' }}">
+          {{ 'Installed' if nmap.installed else 'Missing CLI' }}
+        </span>
+      </div>
+
+      <div class="p-3 mb-3 rounded bg-navy-light border border-subtle" style="font-size: 0.85rem;">
+        <div class="mb-1"><strong class="text-muted">Detected Version:</strong> <span class="text-white font-monospace">{{ nmap.version or 'Not Available' }}</span></div>
+        <div class="mb-1"><strong class="text-muted">Binary Path:</strong> <code class="text-info">{{ nmap.binary_path or 'Not Found on System PATH' }}</code></div>
+        <div><strong class="text-muted">Fallback Mode:</strong> <span class="text-teal">Authentic Sample XML Ingestion (samples/sample_nmap.xml)</span></div>
+      </div>
+
+      {% if not nmap.installed %}
+      <h6 class="text-white fw-bold mb-2">Installation Instructions</h6>
+      <ul class="text-dim ps-3 mb-0" style="font-size: 0.8rem;">
+        {% for ins in nmap.instructions %}
+        <li>{{ ins }}</li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="alert alert-success bg-success bg-opacity-10 border-0 text-success py-2 px-3 mb-0" style="font-size: 0.85rem;">
+        <i class="bi bi-check-circle-fill me-1"></i> Nmap CLI is operational and ready for authorized lab network scanning.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Snort Card -->
+  <div class="col-lg-6">
+    <div class="cyber-card p-4 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex align-items-center">
+          <i class="bi bi-eye text-teal fs-3 me-2"></i>
+          <div>
+            <h5 class="fw-bold text-white mb-0">Snort Intrusion Detection System</h5>
+            <small class="text-muted">Signature-based packet inspection</small>
+          </div>
+        </div>
+        <span class="badge {{ 'bg-success' if snort.installed else 'bg-secondary' }}">
+          {{ 'Installed' if snort.installed else 'Missing Sensor' }}
+        </span>
+      </div>
+
+      <div class="p-3 mb-3 rounded bg-navy-light border border-subtle" style="font-size: 0.85rem;">
+        <div class="mb-1"><strong class="text-muted">Detected Version:</strong> <span class="text-white font-monospace">{{ snort.version or 'Not Available' }}</span></div>
+        <div class="mb-1"><strong class="text-muted">Binary Path:</strong> <code class="text-info">{{ snort.binary_path or 'Not Found on System PATH' }}</code></div>
+        <div><strong class="text-muted">Active Sensor Status:</strong> <span class="text-warning">Standby / Offline Log Parsing Mode</span></div>
+      </div>
+
+      {% if not snort.installed %}
+      <h6 class="text-white fw-bold mb-2">Setup Guide</h6>
+      <ul class="text-dim ps-3 mb-0" style="font-size: 0.8rem;">
+        {% for ins in snort.instructions %}
+        <li>{{ ins }}</li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="alert alert-success bg-success bg-opacity-10 border-0 text-success py-2 px-3 mb-0" style="font-size: 0.85rem;">
+        <i class="bi bi-check-circle-fill me-1"></i> Snort binary verified. Use rule explainer or ingest fast-alert logs.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Python Cryptographic & Packet Engine Health -->
+<div class="cyber-card p-4">
+  <h5 class="fw-bold text-white mb-3"><i class="bi bi-cpu me-2 text-cyan"></i>Python Runtime Environment & Drivers</h5>
+  <div class="row g-3">
+    <div class="col-md-4">
+      <div class="p-3 rounded bg-navy-light border border-subtle">
+        <div class="text-dim fs-8 text-uppercase">Operating System</div>
+        <div class="text-white fw-bold fs-6">{{ os_name }}</div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="p-3 rounded bg-navy-light border border-subtle">
+        <div class="text-dim fs-8 text-uppercase">Python Engine</div>
+        <div class="text-teal fw-bold fs-6">Python {{ python_version }}</div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="p-3 rounded bg-navy-light border border-subtle">
+        <div class="text-dim fs-8 text-uppercase">Scapy Capture Driver</div>
+        <div class="text-success fw-bold fs-6">Offline PCAP Ready (Scapy 2.6)</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

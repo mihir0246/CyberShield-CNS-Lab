@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - Laboratory Manual{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}" class="text-muted text-decoration-none">Laboratories</a></li>
+<li class="breadcrumb-item"><a href="{{ url_for('docs.list_docs') }}" class="text-muted text-decoration-none">Docs</a></li>
+<li class="breadcrumb-item active text-cyan" aria-current="page">{{ slug }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <!-- Document Content Column -->
+  <div class="col-lg-9">
+    <div class="cyber-card p-4 p-md-5 mb-4">
+      <div class="d-flex justify-content-between align-items-center pb-3 mb-4 border-bottom border-subtle">
+        <div>
+          <span class="badge bg-info text-dark fw-bold me-2">DOCUMENTATION</span>
+          <span class="text-muted" style="font-size: 0.85rem;">docs/{{ slug }}.md</span>
+        </div>
+        <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('raw-markdown-content')">
+          <i class="bi bi-clipboard me-1"></i> Copy Raw Markdown
+        </button>
+      </div>
+
+      <!-- Rendered HTML Content -->
+      <article class="doc-article text-light" style="line-height: 1.7; font-size: 0.95rem;">
+        {{ rendered_html | safe }}
+      </article>
+
+      <!-- Hidden Raw Markdown for Clipboard -->
+      <textarea id="raw-markdown-content" class="d-none">{{ raw_markdown }}</textarea>
+    </div>
+  </div>
+
+  <!-- Sidebar Index Column -->
+  <div class="col-lg-3">
+    <div class="cyber-card p-3 sticky-top" style="top: 20px;">
+      <h6 class="fw-bold text-white mb-3"><i class="bi bi-journals me-2 text-teal"></i>All Laboratory Docs</h6>
+      <div class="d-flex flex-column gap-1">
+        {% for s, t in all_docs.items() %}
+        <a href="{{ url_for('docs.view_doc', slug=s) }}" class="btn btn-sm text-start py-2 {% if s == slug %}btn-cyber-primary{% else %}btn-outline-secondary border-0 text-muted{% endif %}">
+          <i class="bi bi-file-text me-1"></i> {{ t }}
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

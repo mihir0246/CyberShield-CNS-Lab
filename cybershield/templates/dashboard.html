@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% block title %}Security Laboratory Dashboard{% endblock %}
+{% block page_title %}Laboratory Dashboard & Syllabus Overview{% endblock %}
+
+{% block content %}
+<!-- Top Metrics Row -->
+<div class="row g-3 mb-4">
+  <div class="col-xl-3 col-sm-6">
+    <div class="cyber-card p-3 d-flex align-items-center">
+      <div class="p-3 rounded bg-navy-light text-cyan border border-teal me-3">
+        <i class="bi bi-cpu fs-3"></i>
+      </div>
+      <div>
+        <div class="text-dim text-uppercase fs-7 fw-semibold">Lab Executions</div>
+        <div class="fs-3 fw-bold text-white">{{ experiment_count }}</div>
+        <small class="text-muted">Total recorded runs</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-sm-6">
+    <div class="cyber-card p-3 d-flex align-items-center">
+      <div class="p-3 rounded bg-navy-light text-teal border border-teal me-3">
+        <i class="bi bi-key-fill fs-3"></i>
+      </div>
+      <div>
+        <div class="text-dim text-uppercase fs-7 fw-semibold">Cipher Audits</div>
+        <div class="fs-3 fw-bold text-white">{{ cipher_ops_count }}</div>
+        <small class="text-muted">Caesar, Vernam, Hill, RSA</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-sm-6">
+    <div class="cyber-card p-3 d-flex align-items-center">
+      <div class="p-3 rounded bg-navy-light text-primary border border-primary me-3">
+        <i class="bi bi-file-earmark-binary fs-3"></i>
+      </div>
+      <div>
+        <div class="text-dim text-uppercase fs-7 fw-semibold">PCAPs Analyzed</div>
+        <div class="fs-3 fw-bold text-white">{{ pcap_analyzed_count }}</div>
+        <small class="text-muted">Captures inspected</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-sm-6">
+    <div class="cyber-card p-3 d-flex align-items-center">
+      <div class="p-3 rounded bg-navy-light text-danger border border-danger me-3">
+        <i class="bi bi-shield-exclamation fs-3"></i>
+      </div>
+      <div>
+        <div class="text-dim text-uppercase fs-7 fw-semibold">Snort Alerts</div>
+        <div class="fs-3 fw-bold text-white">{{ alerts_count }}</div>
+        <small class="text-muted">IDS signatures matched</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Progress Banner -->
+<div class="cyber-card p-4 mb-4">
+  <div class="row align-items-center">
+    <div class="col-lg-8">
+      <h5 class="fw-bold text-white mb-1"><i class="bi bi-mortarboard me-2 text-teal"></i>Academic CNS Syllabus Coverage</h5>
+      <p class="text-muted mb-3" style="font-size: 0.9rem;">
+        Integrated practical suite fulfilling the complete Computer Engineering Cryptography & Network Security laboratory syllabus.
+        Each module features algorithmic implementations, real mathematical explanations, and structured auditing.
+      </p>
+      <div class="d-flex align-items-center gap-3">
+        <div class="progress flex-grow-1" style="height: 10px; background-color: rgba(255,255,255,0.08);">
+          <div class="progress-bar bg-info progress-bar-striped progress-bar-animated" role="progressbar" id="dashboardProgressBar" data-completion="{{ completion_percent }}" aria-valuenow="{{ completion_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+        <script>
+          (function() {
+            var pb = document.getElementById('dashboardProgressBar');
+            if (pb) { pb.style.width = pb.getAttribute('data-completion') + '%'; }
+          })();
+        </script>
+        <span class="badge bg-navy-light border border-teal text-cyan px-2 py-1">{{ completed_count }} / 10 Active Modules</span>
+      </div>
+    </div>
+    <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+      <a href="{{ url_for('docs.view_doc', slug='practical_manual') }}" class="btn btn-cyber-primary me-2">
+        <i class="bi bi-journal-check me-1"></i> Open Lab Manual
+      </a>
+      <a href="{{ url_for('correlation.correlation_lab') }}" class="btn btn-cyber-outline">
+        <i class="bi bi-diagram-3 me-1"></i> Correlate All
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Main 2-Column Grid -->
+<div class="row g-4 mb-4">
+  <!-- Syllabus Experiments Checklist -->
+  <div class="col-lg-8">
+    <div class="cyber-card">
+      <div class="cyber-card-header">
+        <span class="fw-bold"><i class="bi bi-list-check me-2 text-teal"></i>Syllabus Laboratory Experiments</span>
+        <span class="badge bg-navy-light text-muted border border-subtle">Semester Practical List</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-cyber mb-0">
+          <thead>
+            <tr>
+              <th>Exp #</th>
+              <th>Laboratory Title</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for exp in experiments_status %}
+            <tr>
+              <td class="fw-bold text-cyan" style="width: 70px;">EXP-0{{ exp.num }}</td>
+              <td>
+                <div class="fw-medium text-white">{{ exp.title }}</div>
+              </td>
+              <td>
+                <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50">
+                  <i class="bi bi-check-circle-fill me-1"></i> {{ exp.status }}
+                </span>
+              </td>
+              <td>
+                <a href="{{ url_for(exp.route) }}" class="btn btn-sm btn-outline-info">
+                  Open Lab <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tool Availability & Quick Status -->
+  <div class="col-lg-4">
+    <div class="cyber-card mb-4">
+      <div class="cyber-card-header">
+        <span class="fw-bold"><i class="bi bi-shield-check me-2 text-teal"></i>Tool Availability</span>
+        <a href="{{ url_for('main.tools_page') }}" class="text-cyan text-decoration-none" style="font-size: 0.8rem;">View Details</a>
+      </div>
+      <div class="cyber-card-body">
+        {% for key, tool in tools_summary.items() %}
+        <div class="p-2 mb-2 rounded bg-navy-light border border-subtle d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center">
+            <span class="p-1 rounded-circle {{ 'bg-success' if tool.available else 'bg-warning' }} me-2" style="width: 8px; height: 8px;"></span>
+            <div>
+              <div class="fw-medium text-white fs-7">{{ tool.name }}</div>
+              <small class="text-muted" style="font-size: 0.75rem;">{{ tool.version }}</small>
+            </div>
+          </div>
+          <span class="badge {{ tool.status_badge }}">{{ 'Ready' if tool.available else 'Fallback Mode' }}</span>
+        </div>
+        {% endfor %}
+        <div class="mt-3 p-2 rounded bg-dark border border-secondary" style="font-size: 0.75rem;">
+          <i class="bi bi-info-circle text-cyan me-1"></i> OS: <span class="text-white">{{ os_info }}</span>. External CLI tools fallback gracefully to authentic lab sample outputs when uninstalled.
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Navigation Hub -->
+    <div class="cyber-card">
+      <div class="cyber-card-header">
+        <span class="fw-bold"><i class="bi bi-lightning-charge me-2 text-warning"></i>Quick Launch</span>
+      </div>
+      <div class="cyber-card-body d-flex flex-column gap-2">
+        <a href="{{ url_for('ciphers.classical_lab') }}" class="btn btn-sm btn-outline-light text-start p-2">
+          <i class="bi bi-lock me-2 text-cyan"></i> Test Classical Substitution & Transposition
+        </a>
+        <a href="{{ url_for('rsa.rsa_lab') }}" class="btn btn-sm btn-outline-light text-start p-2">
+          <i class="bi bi-shield-lock me-2 text-cyan"></i> Generate RSA-2048 Keypair & OAEP
+        </a>
+        <a href="{{ url_for('pcap.pcap_lab') }}" class="btn btn-sm btn-outline-light text-start p-2">
+          <i class="bi bi-file-earmark-code me-2 text-cyan"></i> Inspect Packet Hierarchy (Scapy PCAP)
+        </a>
+        <a href="{{ url_for('nmap.nmap_lab') }}" class="btn btn-sm btn-outline-light text-start p-2">
+          <i class="bi bi-radar me-2 text-cyan"></i> Scan Authorized Target (Localhost)
+        </a>
+        <a href="{{ url_for('dos.dos_lab') }}" class="btn btn-sm btn-outline-light text-start p-2">
+          <i class="bi bi-sliders me-2 text-cyan"></i> Run Token-Bucket DoS Simulation
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Experiment Audit Runs -->
+<div class="cyber-card mb-4">
+  <div class="cyber-card-header">
+    <span class="fw-bold"><i class="bi bi-clock-history me-2 text-teal"></i>Recent Laboratory Activity Logs</span>
+    <a href="{{ url_for('history.history_page') }}" class="btn btn-sm btn-cyber-outline">View Full History</a>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-cyber mb-0">
+      <thead>
+        <tr>
+          <th>Run ID</th>
+          <th>Experiment Module</th>
+          <th>Title / Operation</th>
+          <th>Execution Time</th>
+          <th>Status</th>
+          <th>Timestamp</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for run in recent_runs %}
+        <tr>
+          <td class="text-cyan fw-bold">#{{ run.id }}</td>
+          <td><span class="badge bg-navy-light text-info border border-info border-opacity-25">{{ run.experiment_type }}</span></td>
+          <td class="text-white">{{ run.title }}</td>
+          <td class="text-muted">{{ run.execution_time_ms }} ms</td>
+          <td>
+            <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50">{{ run.status }}</span>
+          </td>
+          <td class="text-muted" style="font-size: 0.8rem;">{{ run.created_at.strftime('%Y-%m-%d %H:%M:%S UTC') if run.created_at else '-' }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" class="text-center py-4 text-muted">
+            <i class="bi bi-inbox fs-3 d-block mb-2 text-dim"></i>
+            No experiment executions recorded yet. Start by selecting any lab from the sidebar!
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

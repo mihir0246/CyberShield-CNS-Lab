@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+{% block title %}Experiment 1: Classical Cryptographic Techniques{% endblock %}
+{% block page_title %}Experiment 1: Classical Cryptographic Techniques{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}" class="text-muted text-decoration-none">Laboratories</a></li>
+<li class="breadcrumb-item active text-cyan" aria-current="page">Classical Ciphers</li>
+{% endblock %}
+
+{% block content %}
+<div class="cyber-card mb-4 p-3 bg-navy-light">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div>
+      <span class="badge bg-info text-dark fw-bold me-2">SYLLABUS EXP 1</span>
+      <span class="text-white fw-bold">Caesar Cipher, Vernam Cipher (One-Time Pad), and Rail Fence Cipher</span>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('docs.view_doc', slug='practical_manual') }}" class="btn btn-sm btn-outline-info">
+        <i class="bi bi-book me-1"></i> View Theory & Viva
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Tabs Navigation -->
+<ul class="nav nav-tabs border-subtle mb-4" id="cipherTabs" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active text-white fw-medium" id="caesar-tab" data-bs-toggle="tab" data-bs-target="#caesar-pane" type="button" role="tab">
+      <i class="bi bi-arrow-repeat me-1 text-teal"></i> Caesar Cipher
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link text-white fw-medium" id="vernam-tab" data-bs-toggle="tab" data-bs-target="#vernam-pane" type="button" role="tab">
+      <i class="bi bi-shield-shaded me-1 text-teal"></i> Vernam Cipher (OTP)
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link text-white fw-medium" id="railfence-tab" data-bs-toggle="tab" data-bs-target="#railfence-pane" type="button" role="tab">
+      <i class="bi bi-distribute-vertical me-1 text-teal"></i> Rail Fence Cipher
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content" id="cipherTabsContent">
+  <!-- TAB 1: CAESAR CIPHER -->
+  <div class="tab-pane fade show active" id="caesar-pane" role="tabpanel">
+    <div class="row g-4">
+      <div class="col-lg-6">
+        <div class="cyber-card p-4">
+          <h5 class="fw-bold text-white mb-3"><i class="bi bi-input-cursor-text me-2 text-cyan"></i>Input Parameters</h5>
+          <div class="mb-3">
+            <label class="form-label">Message Text</label>
+            <textarea id="caesar-text" class="form-control" rows="3" placeholder="Enter plaintext or ciphertext...">CyberShield CNS Laboratory 2026: Hello World!</textarea>
+          </div>
+          <div class="mb-3">
+            <div class="d-flex justify-content-between">
+              <label class="form-label">Shift Key (0 - 25)</label>
+              <span id="caesar-shift-val" class="badge bg-navy-light text-cyan border border-teal">3</span>
+            </div>
+            <input type="range" class="form-range" id="caesar-shift" min="0" max="25" value="3" oninput="document.getElementById('caesar-shift-val').innerText = this.value">
+          </div>
+          <div class="d-flex gap-2">
+            <button id="btn-caesar-encrypt" class="btn btn-cyber-primary flex-grow-1" onclick="executeCaesar('encrypt')">
+              <i class="bi bi-lock me-1"></i> Encrypt
+            </button>
+            <button id="btn-caesar-decrypt" class="btn btn-cyber-outline flex-grow-1" onclick="executeCaesar('decrypt')">
+              <i class="bi bi-unlock me-1"></i> Decrypt
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-6">
+        <div class="cyber-card p-4 h-100">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold text-white mb-0"><i class="bi bi-check2-circle me-2 text-success"></i>Transformation Output</h5>
+            <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('caesar-result-text')">
+              <i class="bi bi-clipboard"></i> Copy
+            </button>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Result String</label>
+            <textarea id="caesar-result-text" class="form-control font-monospace" rows="3" readonly placeholder="Output appears here..."></textarea>
+          </div>
+          <div id="caesar-explanation-box" class="p-3 rounded bg-navy-light border border-subtle mb-3" style="font-size: 0.85rem;">
+            <i class="bi bi-info-circle text-cyan me-1"></i> Select Encrypt or Decrypt to view character-level shift transformations.
+          </div>
+          <div id="caesar-steps-container" class="table-responsive" style="max-height: 180px; display: none;">
+            <table class="table table-cyber table-sm mb-0">
+              <thead>
+                <tr>
+                  <th>Char</th>
+                  <th>Index</th>
+                  <th>Formula</th>
+                  <th>Output</th>
+                </tr>
+              </thead>
+              <tbody id="caesar-steps-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: VERNAM CIPHER -->
+  <div class="tab-pane fade" id="vernam-pane" role="tabpanel">
+    <div class="row g-4">
+      <div class="col-lg-6">
+        <div class="cyber-card p-4">
+          <h5 class="fw-bold text-white mb-3"><i class="bi bi-shield-lock me-2 text-cyan"></i>One-Time Pad (XOR)</h5>
+          <div class="mb-3">
+            <label class="form-label">Plaintext Message</label>
+            <input type="text" id="vernam-plain" class="form-control" value="TOP SECRET CNS LAB" placeholder="Enter plaintext...">
+          </div>
+          <div class="mb-3">
+            <div class="d-flex justify-content-between">
+              <label class="form-label">Key in Hexadecimal (Optional: leave blank for auto-generation)</label>
+              <button class="btn btn-sm py-0 text-cyan" onclick="generateRandomVernamKey()">Generate Key</button>
+            </div>
+            <input type="text" id="vernam-key-hex" class="form-control font-monospace" placeholder="Auto-generated if empty...">
+            <small class="text-muted" style="font-size: 0.75rem;">Strict OTP Rule: Key length must exactly equal plaintext byte length.</small>
+          </div>
+          <div class="d-flex gap-2 mb-3">
+            <button id="btn-vernam-encrypt" class="btn btn-cyber-primary flex-grow-1" onclick="executeVernam('encrypt')">
+              <i class="bi bi-lock me-1"></i> XOR Encrypt
+            </button>
+            <button id="btn-vernam-decrypt" class="btn btn-cyber-outline flex-grow-1" onclick="executeVernam('decrypt')">
+              <i class="bi bi-unlock me-1"></i> XOR Decrypt
+            </button>
+          </div>
+          <div class="alert alert-warning py-2 px-3 border-0 bg-warning bg-opacity-10 text-warning" style="font-size: 0.8rem;">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i> <strong>Security Axiom:</strong> Vernam OTP guarantees Shannon's information-theoretic security <em>only</em> if the key is truly random, used once, and kept secret. Never reuse a one-time pad key!
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-6">
+        <div class="cyber-card p-4 h-100">
+          <h5 class="fw-bold text-white mb-3"><i class="bi bi-binary me-2 text-cyan"></i>Bitwise XOR Verification</h5>
+          <div class="mb-2">
+            <label class="form-label">Ciphertext (Hexadecimal)</label>
+            <div class="input-group">
+              <input type="text" id="vernam-res-hex" class="form-control font-monospace" readonly>
+              <button class="btn btn-outline-secondary" onclick="copyToClipboard('vernam-res-hex')"><i class="bi bi-clipboard"></i></button>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Active Key (Hexadecimal)</label>
+            <div class="input-group">
+              <input type="text" id="vernam-res-key" class="form-control font-monospace" readonly>
+              <button class="btn btn-outline-secondary" onclick="copyToClipboard('vernam-res-key')"><i class="bi bi-clipboard"></i></button>
+            </div>
+          </div>
+          <div id="vernam-steps-container" class="table-responsive" style="max-height: 220px; display: none;">
+            <table class="table table-cyber table-sm mb-0">
+              <thead>
+                <tr>
+                  <th>Byte</th>
+                  <th>Plain Byte</th>
+                  <th>Key Byte</th>
+                  <th>Bitwise XOR Operation</th>
+                  <th>Cipher</th>
+                </tr>
+              </thead>
+              <tbody id="vernam-steps-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: RAIL FENCE CIPHER -->
+  <div class="tab-pane fade" id="railfence-pane" role="tabpanel">
+    <div class="row g-4">
+      <div class="col-lg-6">
+        <div class="cyber-card p-4">
+          <h5 class="fw-bold text-white mb-3"><i class="bi bi-distribute-vertical me-2 text-cyan"></i>Transposition Controls</h5>
+          <div class="mb-3">
+            <label class="form-label">Message Text</label>
+            <textarea id="railfence-text" class="form-control" rows="3">DEFEND THE EAST WALL</textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Number of Rails (Depth &ge; 2)</label>
+            <input type="number" id="railfence-rails" class="form-control" min="2" max="15" value="3">
+          </div>
+          <div class="d-flex gap-2">
+            <button id="btn-railfence-encrypt" class="btn btn-cyber-primary flex-grow-1" onclick="executeRailFence('encrypt')">
+              <i class="bi bi-lock me-1"></i> Transpose Encrypt
+            </button>
+            <button id="btn-railfence-decrypt" class="btn btn-cyber-outline flex-grow-1" onclick="executeRailFence('decrypt')">
+              <i class="bi bi-unlock me-1"></i> Reconstruct Decrypt
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-6">
+        <div class="cyber-card p-4 h-100">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold text-white mb-0"><i class="bi bi-diagram-2 me-2 text-cyan"></i>Zig-Zag Trajectory Visualization</h5>
+            <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('railfence-result-text')">
+              <i class="bi bi-clipboard"></i> Copy Result
+            </button>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Transposed Output</label>
+            <input type="text" id="railfence-result-text" class="form-control font-monospace" readonly>
+          </div>
+          <label class="form-label">Rail Trajectory Grid</label>
+          <pre id="railfence-matrix-view" class="code-output" style="white-space: pre; line-height: 1.4;">(Run encryption or decryption to visualize the zig-zag transposition wave)</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Caesar Execution
+async function executeCaesar(operation) {
+  const btn = document.getElementById(operation === 'encrypt' ? 'btn-caesar-encrypt' : 'btn-caesar-decrypt');
+  const text = document.getElementById('caesar-text').value;
+  const shift = parseInt(document.getElementById('caesar-shift').value);
+
+  const endpoint = operation === 'encrypt' ? '{{ url_for("ciphers.caesar_encrypt") }}' : '{{ url_for("ciphers.caesar_decrypt") }}';
+  const payload = operation === 'encrypt' ? { plaintext: text, shift: shift } : { ciphertext: text, shift: shift };
+
+  try {
+    const res = await apiCall(endpoint, payload, btn);
+    const d = res.data;
+    document.getElementById('caesar-result-text').value = operation === 'encrypt' ? d.ciphertext : d.plaintext;
+    document.getElementById('caesar-explanation-box').innerHTML = `<strong>Formula:</strong> ${d.explanation}`;
+
+    const tbody = document.getElementById('caesar-steps-body');
+    tbody.innerHTML = '';
+    d.steps.forEach(s => {
+      tbody.innerHTML += `<tr>
+        <td class="text-cyan fw-bold">${s.char}</td>
+        <td class="text-muted">${s.orig_pos}</td>
+        <td class="font-monospace text-dim">${s.formula}</td>
+        <td class="text-success fw-bold">${s.result}</td>
+      </tr>`;
+    });
+    document.getElementById('caesar-steps-container').style.display = 'block';
+    showToast(`Caesar ${operation} succeeded!`, 'success');
+  } catch (e) {}
+}
+
+// Vernam Execution
+async function executeVernam(operation) {
+  const btn = document.getElementById(operation === 'encrypt' ? 'btn-vernam-encrypt' : 'btn-vernam-decrypt');
+  const endpoint = operation === 'encrypt' ? '{{ url_for("ciphers.vernam_encrypt") }}' : '{{ url_for("ciphers.vernam_decrypt") }}';
+
+  let payload = {};
+  if (operation === 'encrypt') {
+    payload = {
+      plaintext: document.getElementById('vernam-plain').value,
+      key_hex: document.getElementById('vernam-key-hex').value
+    };
+  } else {
+    payload = {
+      ciphertext_hex: document.getElementById('vernam-res-hex').value || document.getElementById('vernam-plain').value,
+      key_hex: document.getElementById('vernam-res-key').value || document.getElementById('vernam-key-hex').value
+    };
+  }
+
+  try {
+    const res = await apiCall(endpoint, payload, btn);
+    const d = res.data;
+    if (operation === 'encrypt') {
+      document.getElementById('vernam-res-hex').value = d.ciphertext_hex;
+      document.getElementById('vernam-res-key').value = d.key_hex;
+      document.getElementById('vernam-key-hex').value = d.key_hex;
+    } else {
+      document.getElementById('vernam-plain').value = d.plaintext;
+    }
+
+    const tbody = document.getElementById('vernam-steps-body');
+    tbody.innerHTML = '';
+    d.steps.forEach(s => {
+      tbody.innerHTML += `<tr>
+        <td class="text-cyan">#${s.byte_index}</td>
+        <td class="font-monospace text-white">${s.plain_byte || s.plain_char}</td>
+        <td class="font-monospace text-teal">${s.key_byte}</td>
+        <td class="font-monospace text-muted" style="font-size:0.75rem;">${s.xor_op}</td>
+        <td class="font-monospace text-warning">${s.cipher_byte}</td>
+      </tr>`;
+    });
+    document.getElementById('vernam-steps-container').style.display = 'block';
+    showToast(`Vernam OTP ${operation} completed!`, 'success');
+  } catch (e) {}
+}
+
+function generateRandomVernamKey() {
+  const text = document.getElementById('vernam-plain').value;
+  const bytesCount = new TextEncoder().encode(text).length;
+  if (!bytesCount) return;
+  const arr = new Uint8Array(bytesCount);
+  window.crypto.getRandomValues(arr);
+  const hex = Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+  document.getElementById('vernam-key-hex').value = hex;
+  showToast(`Generated ${bytesCount}-byte cryptographic key!`, 'info');
+}
+
+// Rail Fence Execution
+async function executeRailFence(operation) {
+  const btn = document.getElementById(operation === 'encrypt' ? 'btn-railfence-encrypt' : 'btn-railfence-decrypt');
+  const endpoint = operation === 'encrypt' ? '{{ url_for("ciphers.railfence_encrypt") }}' : '{{ url_for("ciphers.railfence_decrypt") }}';
+  const text = document.getElementById('railfence-text').value;
+  const rails = document.getElementById('railfence-rails').value;
+
+  const payload = operation === 'encrypt' ? { plaintext: text, rails: rails } : { ciphertext: text, rails: rails };
+
+  try {
+    const res = await apiCall(endpoint, payload, btn);
+    const d = res.data;
+    document.getElementById('railfence-result-text').value = operation === 'encrypt' ? d.ciphertext : d.plaintext;
+    
+    // Draw matrix
+    if (d.visual_rows) {
+      document.getElementById('railfence-matrix-view').innerText = d.visual_rows.join('\n');
+    }
+    showToast(`Rail Fence ${operation} completed!`, 'success');
+  } catch (e) {}
+}
+</script>
+{% endblock %}

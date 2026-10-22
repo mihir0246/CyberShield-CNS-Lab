@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+{% block title %}Experiment 9: Snort IDS Analyzer{% endblock %}
+{% block page_title %}Experiment 9: Snort Intrusion Detection System & Rule Analysis{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}" class="text-muted text-decoration-none">Laboratories</a></li>
+<li class="breadcrumb-item active text-cyan" aria-current="page">Snort IDS Analyzer</li>
+{% endblock %}
+
+{% block content %}
+<div class="cyber-card mb-4 p-3 bg-navy-light">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div>
+      <span class="badge bg-info text-dark fw-bold me-2">SYLLABUS EXP 9</span>
+      <span class="text-white fw-bold">Network Intrusion Detection, Signature Rule Anatomy, and Fast-Alert Ingestion</span>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-sm btn-cyber-primary" onclick="loadSampleLog()">
+        <i class="bi bi-file-earmark-text me-1"></i> Ingest Sample Snort Alerts
+      </button>
+      <button class="btn btn-sm btn-cyber-outline" data-bs-toggle="modal" data-bs-target="#snortConfigModal">
+        <i class="bi bi-gear me-1"></i> Interface Config Guide
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Rule Explainer & Interactive Tester -->
+<div class="row g-4 mb-4">
+  <div class="col-lg-6">
+    <div class="cyber-card p-4 h-100">
+      <h5 class="fw-bold text-white mb-3"><i class="bi bi-code-slash me-2 text-cyan"></i>Interactive Snort Rule Syntax Explainer</h5>
+      <div class="mb-3">
+        <label class="form-label">Rule Definition (Header + Options)</label>
+        <textarea id="snort-rule-input" class="form-control font-monospace" rows="3">alert tcp $EXTERNAL_NET any -> $HOME_NET 80 (msg:"LAB WEB-MISC Directory Traversal (../)"; content:"../"; nocase; sid:1000002; rev:1; classtype:web-application-attack; priority:1;)</textarea>
+      </div>
+
+      <div class="d-flex gap-2 mb-3">
+        <button id="btn-explain-rule" class="btn btn-cyber-primary flex-grow-1" onclick="explainRule()">
+          <i class="bi bi-diagram-3 me-1"></i> Deconstruct Rule Syntax
+        </button>
+      </div>
+
+      <!-- Quick Rule Presets -->
+      <div class="mb-2">
+        <span class="text-dim fs-8">Educational Rule Presets:</span>
+        <div class="d-flex flex-wrap gap-1 mt-1">
+          {% for r in sample_rules %}
+          <button class="btn btn-sm btn-outline-secondary py-0" style="font-size: 0.75rem;" onclick="setRulePreset('{{ r.rule | escape }}')">
+            {{ r.name }}
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Deconstruction View -->
+  <div class="col-lg-6">
+    <div class="cyber-card p-4 h-100">
+      <h5 class="fw-bold text-white mb-3"><i class="bi bi-card-checklist me-2 text-teal"></i>Rule Anatomy Breakdown</h5>
+      <div id="rule-explanation-box" class="p-3 rounded bg-navy-light border border-subtle">
+        <div class="text-muted text-center py-4">Click 'Deconstruct Rule Syntax' to view component analysis.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Alerts Log Stream & Telemetry -->
+<div class="cyber-card p-4 mb-4">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    <div>
+      <h5 class="fw-bold text-white mb-0"><i class="bi bi-shield-exclamation me-2 text-danger"></i>Ingested IDS Alert Events</h5>
+      <small id="alert-source-badge" class="text-muted">Displaying verified fast alert logs</small>
+    </div>
+    <div class="d-flex gap-2">
+      <input type="file" id="snort-upload-input" class="d-none" onchange="uploadSnortLog()">
+      <button class="btn btn-sm btn-cyber-outline" onclick="document.getElementById('snort-upload-input').click()">
+        <i class="bi bi-upload me-1"></i> Upload Alert Log
+      </button>
+      <button class="btn btn-sm btn-cyber-outline" onclick="exportAlertsCsv()">
+        <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export CSV
+      </button>
+    </div>
+  </div>
+
+  <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+    <table class="table table-cyber table-sm mb-0">
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>SID:Rev</th>
+          <th>Signature Name</th>
+          <th>Classification</th>
+          <th>Priority</th>
+          <th>Proto</th>
+          <th>Source Endpoint</th>
+          <th>Target Endpoint</th>
+        </tr>
+      </thead>
+      <tbody id="snort-alerts-table-body">
+        <tr>
+          <td colspan="8" class="text-center text-muted py-4">
+            Click 'Ingest Sample Snort Alerts' or upload an alert log to view signature matches.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal: Snort Configuration Guide -->
+<div class="modal fade" id="snortConfigModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content cyber-card border-teal">
+      <div class="cyber-card-header">
+        <h5 class="modal-title text-white fw-bold"><i class="bi bi-gear text-teal me-2"></i>Snort Sensor Configuration & Interface Monitoring</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="cyber-card-body">
+        <h6 class="text-info fw-bold mb-1">1. Verify Sensor Availability</h6>
+        <p class="text-muted" style="font-size: 0.85rem;">Status: <span class="badge {{ 'bg-success' if installation.installed else 'bg-secondary' }}">{{ 'Snort ' ~ installation.version if installation.installed else 'Binary Not on PATH' }}</span></p>
+
+        <h6 class="text-info fw-bold mb-1">2. Configure Network Variables in snort.conf</h6>
+        <pre class="code-output p-2 mb-3">ipvar HOME_NET [192.168.1.0/24,127.0.0.1/32]
+ipvar EXTERNAL_NET !$HOME_NET</pre>
+
+        <h6 class="text-info fw-bold mb-1">3. Launch Snort in NIDS Fast-Alert Mode</h6>
+        <pre class="code-output p-2 mb-3">snort -A fast -q -c /etc/snort/snort.conf -i eth0 -l /var/log/snort</pre>
+
+        <div class="alert alert-warning bg-warning bg-opacity-10 border-0 text-warning" style="font-size: 0.85rem;">
+          <i class="bi bi-info-circle me-1"></i> Notice: CyberShield does not claim an active live sensor is running unless verified through OS process status. If uninstalled on Windows, use the built-in fast alert ingestion for offline analysis.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let currentAlerts = [];
+
+function setRulePreset(ruleText) {
+  document.getElementById('snort-rule-input').value = ruleText;
+  explainRule();
+}
+
+async function explainRule() {
+  const btn = document.getElementById('btn-explain-rule');
+  const rule = document.getElementById('snort-rule-input').value;
+
+  try {
+    const res = await apiCall('{{ url_for("snort.explain_rule_route") }}', { rule: rule }, btn);
+    const d = res.data;
+    const box = document.getElementById('rule-explanation-box');
+
+    if (!d.valid_syntax) {
+      box.innerHTML = `<div class="alert alert-danger bg-danger bg-opacity-10 border-0 text-danger">${d.error}</div>`;
+      return;
+    }
+
+    box.innerHTML = `
+      <div class="row g-2 mb-2" style="font-size:0.8rem;">
+        <div class="col-sm-4"><span class="text-dim">Action:</span> <span class="badge bg-danger">${d.header.action}</span></div>
+        <div class="col-sm-4"><span class="text-dim">Protocol:</span> <span class="badge bg-navy-light text-cyan border border-subtle">${d.header.protocol}</span></div>
+        <div class="col-sm-4"><span class="text-dim">Direction:</span> <span class="text-white">${d.header.direction}</span></div>
+      </div>
+      <div class="p-2 mb-2 rounded bg-dark border border-secondary" style="font-size:0.75rem;">
+        <div><strong class="text-muted">Source:</strong> <code class="text-info">${d.header.src_ip}:${d.header.src_port}</code></div>
+        <div><strong class="text-muted">Destination:</strong> <code class="text-info">${d.header.dst_ip}:${d.header.dst_port}</code></div>
+      </div>
+      <div class="p-2 rounded bg-dark border border-secondary" style="font-size:0.75rem;">
+        <div><strong class="text-muted">Message (msg):</strong> <span class="text-white">${d.metadata.msg}</span></div>
+        <div><strong class="text-muted">Signature ID (SID):</strong> <span class="text-teal">${d.metadata.sid}</span> | <strong>Rev:</strong> ${d.metadata.rev}</div>
+        <div><strong class="text-muted">Priority:</strong> <span class="badge badge-priority-${d.metadata.priority}">Priority ${d.metadata.priority}</span></div>
+      </div>
+    `;
+    showToast('Rule syntax deconstructed successfully!', 'success');
+  } catch (e) {}
+}
+
+async function loadSampleLog() {
+  try {
+    const res = await apiCall('{{ url_for("snort.load_sample_log") }}', null, null, 'POST');
+    renderAlerts(res.data.alerts);
+    document.getElementById('alert-source-badge').innerText = `Ingested ${res.data.total_alerts} alerts from samples/sample_snort.log (Demo Data)`;
+    showToast(`Loaded ${res.data.total_alerts} Snort alerts!`, 'success');
+  } catch (e) {}
+}
+
+async function uploadSnortLog() {
+  const fileInput = document.getElementById('snort-upload-input');
+  if (!fileInput.files.length) return;
+  const formData = new FormData();
+  formData.append('file', fileInput.files[0]);
+
+  try {
+    const res = await apiCall('{{ url_for("snort.upload_log") }}', formData);
+    renderAlerts(res.data.alerts);
+    document.getElementById('alert-source-badge').innerText = `Uploaded from ${res.data.filename}`;
+    showToast(`Parsed ${res.data.total_alerts} alerts from file!`, 'success');
+  } catch (e) {}
+}
+
+function renderAlerts(alerts) {
+  currentAlerts = alerts || [];
+  const tbody = document.getElementById('snort-alerts-table-body');
+  tbody.innerHTML = '';
+
+  if (!alerts.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3">No alerts parsed from log file.</td></tr>';
+    return;
+  }
+
+  alerts.forEach(a => {
+    tbody.innerHTML += `<tr>
+      <td class="font-monospace text-muted" style="font-size:0.75rem;">${a.timestamp}</td>
+      <td class="font-monospace text-cyan">${a.gid}:${a.sid}:${a.rev}</td>
+      <td class="text-white fw-medium">${a.signature}</td>
+      <td class="text-dim" style="font-size:0.8rem;">${a.classification}</td>
+      <td><span class="badge badge-priority-${a.priority}">Pri ${a.priority}</span></td>
+      <td><span class="badge bg-navy-light text-cyan border border-subtle">${a.protocol}</span></td>
+      <td class="font-monospace text-warning" style="font-size:0.8rem;">${a.src_ip}:${a.src_port}</td>
+      <td class="font-monospace text-teal" style="font-size:0.8rem;">${a.dst_ip}:${a.dst_port}</td>
+    </tr>`;
+  });
+}
+
+function exportAlertsCsv() {
+  if (!currentAlerts.length) {
+    showToast('No alerts to export!', 'warning');
+    return;
+  }
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = '{{ url_for("snort.export_csv_route") }}';
+  const hidden = document.createElement('input');
+  hidden.type = 'hidden';
+  hidden.name = 'alerts';
+  hidden.value = JSON.stringify(currentAlerts);
+  form.appendChild(hidden);
+  document.body.appendChild(form);
+  form.submit();
+  form.remove();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  explainRule();
+  loadSampleLog();
+});
+</script>
+{% endblock %}

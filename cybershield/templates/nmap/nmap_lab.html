@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% block title %}Experiment 7: Nmap Network Scanning{% endblock %}
+{% block page_title %}Experiment 7: Nmap Network Scanning & Port Enumeration{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}" class="text-muted text-decoration-none">Laboratories</a></li>
+<li class="breadcrumb-item active text-cyan" aria-current="page">Nmap Scanner</li>
+{% endblock %}
+
+{% block content %}
+<div class="cyber-card mb-4 p-3 bg-navy-light">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div>
+      <span class="badge bg-info text-dark fw-bold me-2">SYLLABUS EXP 7</span>
+      <span class="text-white fw-bold">TCP 3-Way Handshake Probing, Service Versioning, and Port State Analysis</span>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-sm btn-cyber-primary" onclick="loadSampleNmap()">
+        <i class="bi bi-file-earmark-code me-1"></i> Load Authentic Sample Scan Report
+      </button>
+      <button class="btn btn-sm btn-cyber-outline" data-bs-toggle="modal" data-bs-target="#nmapInstallModal">
+        <i class="bi bi-download me-1"></i> Install Nmap
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- Left Column: Scan Configuration & Guardrails -->
+  <div class="col-lg-5">
+    <div class="cyber-card p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-white mb-0"><i class="bi bi-sliders me-2 text-cyan"></i>Scan Parameters</h5>
+        <span class="badge {{ 'bg-success' if installation.installed else 'bg-warning text-dark' }}">
+          {{ 'Nmap v' ~ installation.version if installation.installed else 'Nmap Not Detected (Demo Mode)' }}
+        </span>
+      </div>
+
+      <!-- Target Selection -->
+      <div class="mb-3">
+        <label class="form-label d-flex justify-content-between">
+          <span>Target IP / Host</span>
+          <span class="text-dim" style="font-size: 0.75rem;">Whitelisted Scope</span>
+        </label>
+        <select id="nmap-target" class="form-select font-monospace">
+          {% for t in allowed_targets %}
+          <option value="{{ t }}" {% if loop.first %}selected{% endif %}>{{ t }} (Authorized Lab Host)</option>
+          {% endfor %}
+        </select>
+        <small class="text-muted" style="font-size: 0.75rem;">
+          <i class="bi bi-shield-shaded text-teal me-1"></i> Ethical Guardrail: Arbitrary external IP scanning is blocked to prevent network abuse.
+        </small>
+      </div>
+
+      <!-- Scan Type -->
+      <div class="mb-3">
+        <label class="form-label">Scan Technique</label>
+        <select id="nmap-scan-type" class="form-select">
+          <option value="connect" selected>TCP Connect Scan (-sT) [Unprivileged / Safe]</option>
+          <option value="service">Service & Version Detection (-sV)</option>
+          <option value="ping">Host Discovery Ping Sweep (-sn)</option>
+          <option value="syn">TCP SYN Stealth Scan (-sS) [Requires Admin/Root]</option>
+          <option value="udp">UDP Port Scan (-sU) [Requires Admin/Root]</option>
+          <option value="os">OS Fingerprinting (-O) [Requires Admin/Root]</option>
+        </select>
+      </div>
+
+      <!-- Port Range -->
+      <div class="mb-4">
+        <label class="form-label">Target Ports</label>
+        <input type="text" id="nmap-ports" class="form-control font-monospace" value="22,80,443,3306,5000,8080" placeholder="e.g. 80,443 or 1-1000">
+      </div>
+
+      <button id="btn-run-scan" class="btn btn-cyber-primary w-100" onclick="executeNmapScan()">
+        <i class="bi bi-radar me-1"></i> Execute Authorized Scan
+      </button>
+    </div>
+  </div>
+
+  <!-- Right Column: Results & Discovered Services -->
+  <div class="col-lg-7">
+    <div class="cyber-card p-4 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-white mb-0"><i class="bi bi-hdd-network me-2 text-cyan"></i>Discovered Host Services</h5>
+        <span id="scan-status-badge" class="badge bg-navy-light text-cyan border border-teal">Ready</span>
+      </div>
+
+      <div class="p-2 rounded bg-navy-light border border-subtle mb-3 font-monospace" style="font-size: 0.8rem;">
+        <span class="text-muted">Executed Command:</span>
+        <span id="nmap-cmd-preview" class="text-white">nmap -sT -p 22,80,443,3306,5000,8080 127.0.0.1</span>
+      </div>
+
+      <div id="sample-notice-banner" class="alert alert-info bg-info bg-opacity-10 border-0 text-info py-2 px-3 mb-3 d-none" style="font-size: 0.8rem;">
+        <i class="bi bi-info-circle-fill me-1"></i> Displaying authentic demonstration scan results parsed from <code>samples/sample_nmap.xml</code>.
+      </div>
+
+      <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+        <table class="table table-cyber table-sm mb-0">
+          <thead>
+            <tr>
+              <th>Port</th>
+              <th>Protocol</th>
+              <th>State</th>
+              <th>Service</th>
+              <th>Product / Version</th>
+            </tr>
+          </thead>
+          <tbody id="nmap-ports-table-body">
+            <tr>
+              <td colspan="5" class="text-center text-muted py-4">Click 'Execute Authorized Scan' or load sample to view enumerated ports.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nmap Installation Instructions -->
+<div class="modal fade" id="nmapInstallModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content cyber-card border-teal">
+      <div class="cyber-card-header">
+        <h5 class="modal-title text-white fw-bold"><i class="bi bi-download text-teal me-2"></i>Nmap Setup Guide</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="cyber-card-body">
+        <h6 class="text-info fw-bold mb-1">Windows</h6>
+        <p class="text-muted" style="font-size: 0.85rem;">
+          1. Download the official installer from <a href="https://nmap.org/download.html" target="_blank" class="text-cyan">https://nmap.org/download.html</a>.<br>
+          2. Check <strong>Add Nmap to system PATH</strong> during installation.
+        </p>
+        <h6 class="text-info fw-bold mb-1">Linux / Ubuntu / WSL</h6>
+        <pre class="code-output p-2 mb-3">sudo apt-get update && sudo apt-get install -y nmap</pre>
+        <h6 class="text-info fw-bold mb-1">macOS</h6>
+        <pre class="code-output p-2 mb-0">brew install nmap</pre>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function executeNmapScan() {
+  const btn = document.getElementById('btn-run-scan');
+  const target = document.getElementById('nmap-target').value;
+  const scanType = document.getElementById('nmap-scan-type').value;
+  const ports = document.getElementById('nmap-ports').value;
+
+  try {
+    const res = await apiCall('{{ url_for("nmap.run_scan") }}', {
+      target: target,
+      scan_type: scanType,
+      ports: ports
+    }, btn);
+
+    renderScanReport(res.data);
+    showToast('Scan execution and XML parsing completed!', 'success');
+  } catch (e) {}
+}
+
+async function loadSampleNmap() {
+  try {
+    const res = await apiCall('{{ url_for("nmap.load_sample") }}', null, null, 'POST');
+    renderScanReport(res.data);
+    showToast('Loaded authentic sample Nmap report!', 'info');
+  } catch (e) {}
+}
+
+function renderScanReport(data) {
+  document.getElementById('nmap-cmd-preview').innerText = data.command_executed || 'nmap scan';
+
+  const notice = document.getElementById('sample-notice-banner');
+  if (data.is_sample_data) {
+    notice.classList.remove('d-none');
+  } else {
+    notice.classList.add('d-none');
+  }
+
+  const tbody = document.getElementById('nmap-ports-table-body');
+  tbody.innerHTML = '';
+
+  const ports = [];
+  (data.hosts || []).forEach(h => {
+    (h.ports || []).forEach(p => ports.push(p));
+  });
+
+  if (!ports.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">No open or probed ports discovered on target.</td></tr>';
+    return;
+  }
+
+  ports.forEach(p => {
+    let stateBadge = 'bg-secondary';
+    if (p.state === 'open') stateBadge = 'bg-success bg-opacity-25 text-success border border-success border-opacity-50';
+    else if (p.state === 'filtered') stateBadge = 'bg-warning bg-opacity-25 text-warning border border-warning border-opacity-50';
+    else if (p.state === 'closed') stateBadge = 'bg-danger bg-opacity-25 text-danger border border-danger border-opacity-50';
+
+    tbody.innerHTML += `<tr>
+      <td class="font-monospace text-cyan fw-bold">${p.port}</td>
+      <td class="text-dim">${p.protocol.toUpperCase()}</td>
+      <td><span class="badge ${stateBadge}">${p.state.toUpperCase()}</span></td>
+      <td class="text-white">${p.service}</td>
+      <td class="font-monospace text-muted" style="font-size:0.8rem;">${p.product} ${p.version}</td>
+    </tr>`;
+  });
+}
+
+// Auto load sample on start
+document.addEventListener('DOMContentLoaded', () => {
+  loadSampleNmap();
+});
+</script>
+{% endblock %}

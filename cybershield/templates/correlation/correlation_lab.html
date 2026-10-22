@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}Integrated Security Event Correlation{% endblock %}
+{% block page_title %}Integrated Security Event Correlation & Telemetry Fusion{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}" class="text-muted text-decoration-none">Laboratories</a></li>
+<li class="breadcrumb-item active text-cyan" aria-current="page">Event Correlation</li>
+{% endblock %}
+
+{% block content %}
+<div class="cyber-card mb-4 p-3 bg-navy-light">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div>
+      <span class="badge bg-info text-dark fw-bold me-2">INTEGRATION HUB</span>
+      <span class="text-white fw-bold">Multi-Source Cross-Correlation: PCAP Wire Telemetry + Snort IDS Alerts + Nmap Enumeration + DoS Anomaly Detection</span>
+    </div>
+    <div class="d-flex gap-2">
+      <button id="btn-run-correlation" class="btn btn-sm btn-cyber-primary" onclick="runCorrelation()">
+        <i class="bi bi-diagram-3 me-1"></i> Execute Cross-Lab Correlation Engine
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Correlation Telemetry Metrics -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3 col-sm-6">
+    <div class="cyber-card p-3 text-center">
+      <div class="text-dim fs-8 text-uppercase">Correlated Incidents</div>
+      <div id="m-incidents-count" class="fs-4 fw-bold text-danger">--</div>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="cyber-card p-3 text-center">
+      <div class="text-dim fs-8 text-uppercase">PCAP Frames Evaluated</div>
+      <div id="m-pcap-count" class="fs-4 fw-bold text-cyan">--</div>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="cyber-card p-3 text-center">
+      <div class="text-dim fs-8 text-uppercase">Snort Signatures Indexed</div>
+      <div id="m-snort-count" class="fs-4 fw-bold text-warning">--</div>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="cyber-card p-3 text-center">
+      <div class="text-dim fs-8 text-uppercase">Open Ports Correlated</div>
+      <div id="m-ports-count" class="fs-4 fw-bold text-success">--</div>
+    </div>
+  </div>
+</div>
+
+<!-- Correlated Incidents Table -->
+<div class="cyber-card p-4 mb-4">
+  <h5 class="fw-bold text-white mb-3"><i class="bi bi-shield-shaded me-2 text-teal"></i>Correlated Security Findings</h5>
+  <div class="table-responsive">
+    <table class="table table-cyber mb-0">
+      <thead>
+        <tr>
+          <th>Incident Title</th>
+          <th>Severity</th>
+          <th>Primary Attacker / Target IP</th>
+          <th>Category</th>
+          <th>Confidence</th>
+          <th>Supporting Evidence & Deductions</th>
+        </tr>
+      </thead>
+      <tbody id="findings-table-body">
+        <tr>
+          <td colspan="6" class="text-center text-muted py-4">
+            Click 'Execute Cross-Lab Correlation Engine' to evaluate multi-source security events.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Unified Event Timeline -->
+<div class="cyber-card p-4">
+  <h5 class="fw-bold text-white mb-3"><i class="bi bi-clock-history me-2 text-cyan"></i>Unified Chronological Event Timeline</h5>
+  <p class="text-muted" style="font-size: 0.85rem;">
+    Fuses observed wire frames (Scapy), imported IDS alerts (Snort), and analytical anomaly windows into a unified temporal sequence.
+  </p>
+
+  <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+    <table class="table table-cyber table-sm mb-0">
+      <thead>
+        <tr>
+          <th>Source Domain</th>
+          <th>Timestamp</th>
+          <th>Event Description</th>
+          <th>Severity</th>
+          <th>Telemetry Details</th>
+        </tr>
+      </thead>
+      <tbody id="timeline-table-body">
+        <tr>
+          <td colspan="5" class="text-center text-muted py-3">Run correlation engine to populate chronological timeline.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function runCorrelation() {
+  const btn = document.getElementById('btn-run-correlation');
+  try {
+    const res = await apiCall('{{ url_for("correlation.run_correlation") }}', {}, btn, 'POST');
+    const d = res.data;
+
+    document.getElementById('m-incidents-count').innerText = d.total_correlated_incidents;
+    document.getElementById('m-pcap-count').innerText = d.correlation_summary.pcap_frames_analyzed;
+    document.getElementById('m-snort-count').innerText = d.correlation_summary.snort_alerts_correlated;
+    document.getElementById('m-ports-count').innerText = d.correlation_summary.nmap_services_indexed;
+
+    // Render Findings
+    const tbody = document.getElementById('findings-table-body');
+    tbody.innerHTML = '';
+
+    if (!d.findings.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-3">No suspicious multi-source correlations identified.</td></tr>';
+    } else {
+      d.findings.forEach(f => {
+        let sevClass = 'bg-danger text-white';
+        if (f.severity === 'HIGH') sevClass = 'bg-danger bg-opacity-25 text-danger border border-danger border-opacity-50';
+        else if (f.severity === 'MEDIUM') sevClass = 'bg-warning bg-opacity-25 text-warning border border-warning border-opacity-50';
+
+        const evidenceList = f.evidence.map(e => `<li>${e}</li>`).join('');
+
+        tbody.innerHTML += `<tr>
+          <td>
+            <div class="fw-bold text-white">${f.title}</div>
+            <small class="text-dim">${f.id}</small>
+          </td>
+          <td><span class="badge ${sevClass}">${f.severity}</span></td>
+          <td class="font-monospace text-cyan fw-bold">${f.primary_ip}</td>
+          <td><span class="badge bg-navy-light text-muted border border-subtle">${f.category}</span></td>
+          <td class="text-success fw-bold">${f.confidence_score}%</td>
+          <td>
+            <ul class="mb-1 ps-3 text-muted" style="font-size:0.75rem;">${evidenceList}</ul>
+            <div class="text-dim" style="font-size:0.75rem;"><strong class="text-white">Remediation:</strong> ${f.recommended_action}</div>
+          </td>
+        </tr>`;
+      });
+    }
+
+    // Render Timeline
+    const tBodyTime = document.getElementById('timeline-table-body');
+    tBodyTime.innerHTML = '';
+    d.timeline.forEach(t => {
+      tBodyTime.innerHTML += `<tr>
+        <td><span class="badge bg-navy-light text-cyan border border-subtle">${t.source}</span></td>
+        <td class="font-monospace text-muted" style="font-size:0.75rem;">${t.timestamp}</td>
+        <td class="text-white">${t.event}</td>
+        <td><span class="badge ${t.severity === 'CRITICAL' || t.severity === 'HIGH' ? 'bg-danger bg-opacity-25 text-danger' : 'bg-primary bg-opacity-25 text-primary'}">${t.severity}</span></td>
+        <td class="font-monospace text-dim" style="font-size:0.75rem;">${t.details}</td>
+      </tr>`;
+    });
+
+    showToast(`Identified ${d.total_correlated_incidents} security correlations across lab modules!`, 'success');
+  } catch (e) {}
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  runCorrelation();
+});
+</script>
+{% endblock %}

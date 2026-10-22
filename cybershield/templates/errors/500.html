@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}500 Internal Error{% endblock %}
+{% block page_title %}Internal Server Error{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-5">
+  <div class="col-md-6 text-center">
+    <div class="p-5 cyber-card">
+      <i class="bi bi-exclamation-triangle text-warning display-1 mb-3"></i>
+      <h2 class="fw-bold text-white mb-2">500 - Server Exception</h2>
+      <p class="text-muted mb-4">An unexpected internal server error occurred while executing the laboratory service.</p>
+      <a href="{{ url_for('main.dashboard') }}" class="btn btn-cyber-primary">
+        <i class="bi bi-house me-1"></i> Return to Dashboard
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

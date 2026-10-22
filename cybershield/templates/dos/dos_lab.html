@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+{% block title %}Experiment 8: Controlled DoS Analysis{% endblock %}
+{% block page_title %}Experiment 8: Controlled Denial-of-Service & Rate-Limiting Analysis{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}" class="text-muted text-decoration-none">Laboratories</a></li>
+<li class="breadcrumb-item active text-cyan" aria-current="page">DoS Analysis Lab</li>
+{% endblock %}
+
+{% block content %}
+<!-- Safety Policy Notice -->
+<div class="alert alert-info bg-navy-light border border-teal p-3 mb-4">
+  <div class="d-flex align-items-center">
+    <i class="bi bi-shield-shaded text-teal fs-2 me-3"></i>
+    <div>
+      <h6 class="text-white fw-bold mb-1">ETHICAL SAFETY CONTRACT & LAB ARCHITECTURE</h6>
+      <p class="text-muted mb-0" style="font-size: 0.85rem;">
+        In compliance with academic lab safety guidelines, CyberShield never initiates unconstrained network flooding or targets public systems. This module provides a <strong>mathematical synthetic traffic simulation</strong> and <strong>queuing latency model</strong> to empirically analyze volumetric saturation and token-bucket defensive mitigations.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- Left Column: Simulation Controls -->
+  <div class="col-lg-4">
+    <div class="cyber-card p-4">
+      <h5 class="fw-bold text-white mb-3"><i class="bi bi-sliders2 me-2 text-cyan"></i>Simulation Parameters</h5>
+      
+      <div class="mb-3">
+        <label class="form-label">Attack Profile</label>
+        <select id="dos-attack-type" class="form-select">
+          <option value="TCP SYN Flood" selected>TCP SYN Flood (Half-Open Connection Exhaustion)</option>
+          <option value="UDP High-Port Flood">UDP Port Saturation (ICMP Unreachable Amplification)</option>
+          <option value="HTTP Request Surge">Layer-7 HTTP GET Flood (Web Application Thread Starvation)</option>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <div class="d-flex justify-content-between">
+          <label class="form-label">Baseline Traffic</label>
+          <span id="label-base" class="text-cyan font-monospace">100 pps</span>
+        </div>
+        <input type="range" class="form-range" id="sim-base-rate" min="20" max="300" value="100" oninput="document.getElementById('label-base').innerText = this.value + ' pps'">
+      </div>
+
+      <div class="mb-3">
+        <div class="d-flex justify-content-between">
+          <label class="form-label">Peak Flood Volume</label>
+          <span id="label-peak" class="text-warning font-monospace">2500 pps</span>
+        </div>
+        <input type="range" class="form-range" id="sim-peak-rate" min="500" max="5000" step="100" value="2500" oninput="document.getElementById('label-peak').innerText = this.value + ' pps'">
+      </div>
+
+      <div class="mb-3">
+        <div class="d-flex justify-content-between">
+          <label class="form-label">Duration</label>
+          <span id="label-dur" class="text-white font-monospace">15 sec</span>
+        </div>
+        <input type="range" class="form-range" id="sim-duration" min="5" max="30" value="15" oninput="document.getElementById('label-dur').innerText = this.value + ' sec'">
+      </div>
+
+      <!-- Mitigation Toggle -->
+      <div class="p-3 mb-4 rounded bg-navy-light border border-subtle">
+        <div class="form-check form-switch mb-2">
+          <input class="form-check-input" type="checkbox" id="sim-mitigation-toggle" checked onchange="toggleMitigationUI()">
+          <label class="form-check-label fw-bold text-teal" for="sim-mitigation-toggle">Enforce Rate Limiting Defense</label>
+        </div>
+        <div id="mitigation-options">
+          <label class="form-label text-muted" style="font-size: 0.75rem;">Defense Strategy</label>
+          <select id="sim-strategy" class="form-select form-select-sm mb-2">
+            <option value="Token Bucket Rate Limiting" selected>Token Bucket Rate Limiting (Burst Capping)</option>
+            <option value="SYN Cookies & Kernel Throttling">TCP SYN Cookies (RFC 4987)</option>
+            <option value="Per-IP Connection Bounding">Per-IP Max Connection Bounding</option>
+          </select>
+          <div class="d-flex justify-content-between">
+            <span class="text-dim" style="font-size: 0.75rem;">Threshold:</span>
+            <span id="label-thresh" class="text-success font-monospace" style="font-size: 0.75rem;">400 pps</span>
+          </div>
+          <input type="range" class="form-range" id="sim-threshold" min="200" max="1000" step="50" value="400" oninput="document.getElementById('label-thresh').innerText = this.value + ' pps'">
+        </div>
+      </div>
+
+      <button id="btn-run-sim" class="btn btn-cyber-primary w-100" onclick="executeSimulation()">
+        <i class="bi bi-play-circle me-1"></i> Run Traffic Simulation
+      </button>
+    </div>
+  </div>
+
+  <!-- Right Column: Visual Telemetry Charts & Metrics -->
+  <div class="col-lg-8">
+    <div class="cyber-card p-4 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-white mb-0"><i class="bi bi-graph-up me-2 text-teal"></i>Traffic Telemetry & Latency Degradation</h5>
+        <span id="sim-mode-badge" class="badge bg-success bg-opacity-25 text-success border border-success">Mitigated State</span>
+      </div>
+
+      <!-- Metrics Row -->
+      <div class="row g-2 mb-3">
+        <div class="col-sm-3">
+          <div class="p-2 rounded bg-navy-light border border-subtle text-center">
+            <div class="text-dim fs-8">Total Simulated</div>
+            <div id="m-total-pkts" class="fw-bold text-white fs-6">--</div>
+          </div>
+        </div>
+        <div class="col-sm-3">
+          <div class="p-2 rounded bg-navy-light border border-subtle text-center">
+            <div class="text-dim fs-8">Dropped Packets</div>
+            <div id="m-dropped-pkts" class="fw-bold text-warning fs-6">--</div>
+          </div>
+        </div>
+        <div class="col-sm-3">
+          <div class="p-2 rounded bg-navy-light border border-subtle text-center">
+            <div class="text-dim fs-8">Peak Latency</div>
+            <div id="m-peak-latency" class="fw-bold text-cyan fs-6">-- ms</div>
+          </div>
+        </div>
+        <div class="col-sm-3">
+          <div class="p-2 rounded bg-navy-light border border-subtle text-center">
+            <div class="text-dim fs-8">Drop Ratio</div>
+            <div id="m-drop-pct" class="fw-bold text-danger fs-6">-- %</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chart Canvas -->
+      <div style="height: 250px; position: relative;">
+        <canvas id="dosSimulationChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Hping3 Academic Study Section -->
+<div class="cyber-card p-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="fw-bold text-white mb-0"><i class="bi bi-terminal me-2 text-warning"></i>Hping3 Network Security Tool Study</h5>
+    <span class="badge bg-navy-light text-muted border border-subtle">Packet Assembler / Analyzer</span>
+  </div>
+  <p class="text-muted" style="font-size: 0.85rem;">
+    Hping3 is a standard terminal tool for auditing firewalls and network devices through custom TCP/IP packet generation. The options below detail syllabus-relevant test flags and corresponding enterprise mitigations.
+  </p>
+
+  <div class="table-responsive">
+    <table class="table table-cyber table-sm mb-0">
+      <thead>
+        <tr>
+          <th>Hping3 Flag</th>
+          <th>Mode / Operation</th>
+          <th>Syllabus Purpose & Mechanics</th>
+          <th>Defensive Mitigation Strategy</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in hping3_guide %}
+        <tr>
+          <td class="font-monospace text-cyan fw-bold">{{ item.option }}</td>
+          <td class="text-white">{{ item.meaning }}</td>
+          <td class="text-dim" style="font-size: 0.8rem;">{{ item.purpose }}</td>
+          <td class="text-success" style="font-size: 0.8rem;"><i class="bi bi-shield-check me-1"></i> {{ item.defensive_remedy }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let dosChart = null;
+
+function toggleMitigationUI() {
+  const isChecked = document.getElementById('sim-mitigation-toggle').checked;
+  const optionsDiv = document.getElementById('mitigation-options');
+  optionsDiv.style.opacity = isChecked ? '1' : '0.4';
+  optionsDiv.style.pointerEvents = isChecked ? 'auto' : 'none';
+}
+
+async function executeSimulation() {
+  const btn = document.getElementById('btn-run-sim');
+  const attackType = document.getElementById('dos-attack-type').value;
+  const baseRate = document.getElementById('sim-base-rate').value;
+  const peakRate = document.getElementById('sim-peak-rate').value;
+  const duration = document.getElementById('sim-duration').value;
+  const applyMitigation = document.getElementById('sim-mitigation-toggle').checked;
+  const strategy = document.getElementById('sim-strategy').value;
+  const threshold = document.getElementById('sim-threshold').value;
+
+  try {
+    const res = await apiCall('{{ url_for("dos.run_simulation") }}', {
+      attack_type: attackType,
+      baseline_rate: baseRate,
+      peak_rate: peakRate,
+      duration: duration,
+      apply_mitigation: applyMitigation,
+      strategy: strategy,
+      threshold: threshold
+    }, btn);
+
+    const d = res.data;
+    document.getElementById('m-total-pkts').innerText = d.total_packets_simulated.toLocaleString();
+    document.getElementById('m-dropped-pkts').innerText = d.total_packets_dropped.toLocaleString();
+    document.getElementById('m-peak-latency').innerText = `${d.peak_latency_ms} ms`;
+    document.getElementById('m-drop-pct').innerText = `${d.drop_percentage}%`;
+
+    const badge = document.getElementById('sim-mode-badge');
+    badge.className = applyMitigation 
+      ? 'badge bg-success bg-opacity-25 text-success border border-success' 
+      : 'badge bg-danger bg-opacity-25 text-danger border border-danger';
+    badge.innerText = applyMitigation ? 'Mitigated (Rate Limited)' : 'Unmitigated (Resource Exhausted)';
+
+    // Render Timeline Chart
+    const labels = d.timeline.map(t => `${t.second}s`);
+    const incoming = d.timeline.map(t => t.incoming_rate_pps);
+    const passed = d.timeline.map(t => t.passed_rate_pps);
+    const latency = d.timeline.map(t => t.latency_ms);
+
+    const ctx = document.getElementById('dosSimulationChart').getContext('2d');
+    if (dosChart) dosChart.destroy();
+    dosChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Incoming Traffic (pps)',
+            data: incoming,
+            borderColor: '#f59e0b',
+            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+            fill: true,
+            yAxisID: 'y'
+          },
+          {
+            label: 'Passed to Server (pps)',
+            data: passed,
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            fill: true,
+            yAxisID: 'y'
+          },
+          {
+            label: 'Response Latency (ms)',
+            data: latency,
+            borderColor: '#38bdf8',
+            borderDash: [5, 5],
+            yAxisID: 'y1'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            title: { display: true, text: 'Throughput (Packets / s)', color: '#94a3b8' },
+            grid: { color: 'rgba(255,255,255,0.05)' }
+          },
+          y1: {
+            position: 'right',
+            title: { display: true, text: 'Latency (ms)', color: '#38bdf8' },
+            grid: { drawOnChartArea: false }
+          },
+          x: { grid: { color: 'rgba(255,255,255,0.05)' } }
+        }
+      }
+    });
+
+    showToast('Traffic simulation complete!', 'success');
+  } catch (e) {}
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  executeSimulation();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+{% block title %}Experiment 5: MD5 Hashing & Integrity{% endblock %}
+{% block page_title %}Experiment 5: MD5 Hash Analysis & Integrity Verification{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}" class="text-muted text-decoration-none">Laboratories</a></li>
+<li class="breadcrumb-item active text-cyan" aria-current="page">MD5 Hash Analysis</li>
+{% endblock %}
+
+{% block content %}
+<!-- Broken Crypto Alert Banner -->
+<div class="alert alert-danger bg-danger bg-opacity-10 border-0 p-3 mb-4">
+  <div class="d-flex align-items-center">
+    <i class="bi bi-shield-x text-danger display-6 me-3"></i>
+    <div>
+      <h6 class="text-danger fw-bold mb-1">EDUCATIONAL CRYPTANALYSIS NOTICE: MD5 IS CRYPTOGRAPHICALLY BROKEN</h6>
+      <p class="text-muted mb-0" style="font-size: 0.85rem;">
+        Under RFC 6151, MD5 is completely deprecated for security certificates and digital signatures. Practical collision attacks (Wang et al., Flame malware) allow attackers to generate two distinct inputs yielding identical 128-bit MD5 hashes. Modern applications must use SHA-256 or SHA-3.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- Left Column: Text & File Hashing -->
+  <div class="col-lg-6">
+    <div class="cyber-card p-4 mb-4">
+      <h5 class="fw-bold text-white mb-3"><i class="bi bi-fonts me-2 text-cyan"></i>Text Hash Generator</h5>
+      <div class="mb-3">
+        <label class="form-label">Input Plaintext</label>
+        <textarea id="hash-text-input" class="form-control" rows="2">CyberShield Cryptographic Integrity Test 2026</textarea>
+      </div>
+      <button id="btn-hash-text" class="btn btn-cyber-primary w-100 mb-3" onclick="executeTextHash()">
+        <i class="bi bi-hash me-1"></i> Calculate MD5 & SHA-256
+      </button>
+
+      <div class="p-3 rounded bg-navy-light border border-subtle mb-3">
+        <div class="mb-2">
+          <div class="d-flex justify-content-between">
+            <span class="text-danger fw-bold" style="font-size: 0.8rem;">MD5 Digest (128-bit / Insecure)</span>
+            <span id="md5-time-badge" class="text-muted" style="font-size: 0.75rem;">-- &micro;s</span>
+          </div>
+          <div class="input-group">
+            <input type="text" id="res-md5-digest" class="form-control font-monospace text-warning" readonly>
+            <button class="btn btn-outline-secondary" onclick="copyToClipboard('res-md5-digest')"><i class="bi bi-clipboard"></i></button>
+          </div>
+        </div>
+        <div>
+          <div class="d-flex justify-content-between">
+            <span class="text-success fw-bold" style="font-size: 0.8rem;">SHA-256 Digest (256-bit / NIST Secure)</span>
+            <span id="sha-time-badge" class="text-muted" style="font-size: 0.75rem;">-- &micro;s</span>
+          </div>
+          <div class="input-group">
+            <input type="text" id="res-sha-digest" class="form-control font-monospace text-success" readonly>
+            <button class="btn btn-outline-secondary" onclick="copyToClipboard('res-sha-digest')"><i class="bi bi-clipboard"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- File Hash Upload -->
+    <div class="cyber-card p-4">
+      <h5 class="fw-bold text-white mb-3"><i class="bi bi-file-earmark-lock me-2 text-cyan"></i>File Integrity Checksum</h5>
+      <div class="mb-3">
+        <label class="form-label">Upload File for Digest Generation</label>
+        <input type="file" id="hash-file-input" class="form-control">
+      </div>
+      <button id="btn-hash-file" class="btn btn-cyber-outline w-100" onclick="executeFileHash()">
+        <i class="bi bi-upload me-1"></i> Upload & Compute Checksums
+      </button>
+      <div id="file-hash-result" class="mt-3 p-3 rounded bg-navy-light border border-subtle d-none" style="font-size: 0.8rem;">
+        <div class="text-white fw-bold mb-1" id="file-name-label">File: --</div>
+        <div class="text-muted mb-2" id="file-size-label">Size: -- bytes</div>
+        <div class="font-monospace text-warning mb-1" id="file-md5-val">MD5: --</div>
+        <div class="font-monospace text-success" id="file-sha-val">SHA-256: --</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column: Verification & Benchmark Suite -->
+  <div class="col-lg-6">
+    <!-- Integrity Verifier -->
+    <div class="cyber-card p-4 mb-4">
+      <h5 class="fw-bold text-white mb-3"><i class="bi bi-check2-circle me-2 text-cyan"></i>Integrity Comparator</h5>
+      <div class="mb-2">
+        <label class="form-label">Original Digest (e.g., from vendor release)</label>
+        <input type="text" id="cmp-d1" class="form-control font-monospace" placeholder="Paste expected hash...">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Calculated Digest (locally generated)</label>
+        <input type="text" id="cmp-d2" class="form-control font-monospace" placeholder="Paste local hash...">
+      </div>
+      <button id="btn-verify" class="btn btn-cyber-primary w-100 mb-3" onclick="verifyDigests()">
+        <i class="bi bi-arrow-repeat me-1"></i> Verify Match
+      </button>
+      <div id="verify-result-box" class="p-3 rounded bg-navy-light border border-subtle text-center text-muted" style="font-size: 0.85rem;">
+        Enter two digests above to verify file integrity.
+      </div>
+    </div>
+
+    <!-- Multi-Size Benchmark Suite -->
+    <div class="cyber-card p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-white mb-0"><i class="bi bi-speedometer2 me-2 text-teal"></i>Multi-Size Benchmark Suite</h5>
+        <select id="bench-trials" class="form-select form-select-sm" style="width: 120px;">
+          <option value="3">3 Trials</option>
+          <option value="5" selected>5 Trials</option>
+          <option value="10">10 Trials</option>
+        </select>
+      </div>
+      <p class="text-muted" style="font-size: 0.8rem;">
+        Tests execution time across payload sizes (1 KB, 10 KB, 100 KB, 1 MB, 5 MB) and persists metrics to SQLite.
+      </p>
+      <button id="btn-run-hash-bench" class="btn btn-cyber-primary w-100 mb-3" onclick="runHashBenchmark()">
+        <i class="bi bi-play-circle me-1"></i> Run Repeated Benchmark
+      </button>
+
+      <div style="height: 190px;">
+        <canvas id="hashBenchmarkChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Benchmark Data Table -->
+<div class="cyber-card p-4 mb-4">
+  <h5 class="fw-bold text-white mb-3"><i class="bi bi-table me-2 text-cyan"></i>Benchmark Metrics Table</h5>
+  <div class="table-responsive">
+    <table class="table table-cyber table-sm mb-0">
+      <thead>
+        <tr>
+          <th>Payload Size</th>
+          <th>Bytes</th>
+          <th>MD5 Avg Latency (&micro;s)</th>
+          <th>SHA-256 Avg Latency (&micro;s)</th>
+          <th>SHA / MD5 Ratio</th>
+          <th>SHA-256 Digest Preview</th>
+        </tr>
+      </thead>
+      <tbody id="hash-bench-table-body">
+        <tr>
+          <td colspan="6" class="text-center text-muted py-3">Run benchmark suite to populate empirical latency rows.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let hashChart = null;
+
+async function executeTextHash() {
+  const btn = document.getElementById('btn-hash-text');
+  const text = document.getElementById('hash-text-input').value;
+  try {
+    const res = await apiCall('{{ url_for("hashing.hash_text_route") }}', { text: text }, btn);
+    const d = res.data;
+    document.getElementById('res-md5-digest').value = d.md5.digest;
+    document.getElementById('res-sha-digest').value = d.sha256.digest;
+    document.getElementById('md5-time-badge').innerText = `${d.md5.time_us} µs`;
+    document.getElementById('sha-time-badge').innerText = `${d.sha256.time_us} µs`;
+    showToast('Calculated MD5 and SHA-256 digests!', 'success');
+  } catch (e) {}
+}
+
+async function executeFileHash() {
+  const fileInput = document.getElementById('hash-file-input');
+  if (!fileInput.files.length) {
+    showToast('Please select a file to hash!', 'warning');
+    return;
+  }
+  const btn = document.getElementById('btn-hash-file');
+  const formData = new FormData();
+  formData.append('file', fileInput.files[0]);
+
+  try {
+    const res = await apiCall('{{ url_for("hashing.hash_file_route") }}', formData, btn);
+    const d = res.data;
+    const box = document.getElementById('file-hash-result');
+    box.classList.remove('d-none');
+    document.getElementById('file-name-label').innerText = `File: ${d.filename}`;
+    document.getElementById('file-size-label').innerText = `Size: ${d.file_size_bytes.toLocaleString()} bytes`;
+    document.getElementById('file-md5-val').innerText = `MD5: ${d.md5.digest} (${d.md5.speed_mb_s} MB/s)`;
+    document.getElementById('file-sha-val').innerText = `SHA-256: ${d.sha256.digest} (${d.sha256.speed_mb_s} MB/s)`;
+    showToast('File hashed successfully!', 'success');
+  } catch (e) {}
+}
+
+async function verifyDigests() {
+  const btn = document.getElementById('btn-verify');
+  const d1 = document.getElementById('cmp-d1').value;
+  const d2 = document.getElementById('cmp-d2').value;
+  try {
+    const res = await apiCall('{{ url_for("hashing.verify_integrity_route") }}', { digest1: d1, digest2: d2 }, btn);
+    const box = document.getElementById('verify-result-box');
+    if (res.data.match) {
+      box.className = 'p-3 rounded bg-success bg-opacity-25 border border-success text-success fw-bold text-center';
+      box.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i> ${res.data.verdict}`;
+    } else {
+      box.className = 'p-3 rounded bg-danger bg-opacity-25 border border-danger text-danger fw-bold text-center';
+      box.innerHTML = `<i class="bi bi-x-circle-fill me-1"></i> ${res.data.verdict}`;
+    }
+  } catch (e) {}
+}
+
+async function runHashBenchmark() {
+  const btn = document.getElementById('btn-run-hash-bench');
+  const trials = document.getElementById('bench-trials').value;
+  try {
+    const res = await apiCall('{{ url_for("hashing.run_benchmark_route") }}', { trials: trials }, btn);
+    const bData = res.data.benchmark_data;
+
+    const tbody = document.getElementById('hash-bench-table-body');
+    tbody.innerHTML = '';
+    const labels = [];
+    const md5Times = [];
+    const shaTimes = [];
+
+    bData.forEach(item => {
+      labels.push(item.label);
+      md5Times.push(item.md5_avg_us);
+      shaTimes.push(item.sha256_avg_us);
+
+      tbody.innerHTML += `<tr>
+        <td class="text-cyan fw-bold">${item.label}</td>
+        <td class="text-muted">${item.bytes.toLocaleString()} B</td>
+        <td class="text-warning">${item.md5_avg_us} &micro;s</td>
+        <td class="text-success">${item.sha256_avg_us} &micro;s</td>
+        <td class="text-white">${item.ratio_sha_over_md5}x</td>
+        <td class="font-monospace text-dim">${item.sha256_digest_preview}</td>
+      </tr>`;
+    });
+
+    // Chart
+    const ctx = document.getElementById('hashBenchmarkChart').getContext('2d');
+    if (hashChart) hashChart.destroy();
+    hashChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          { label: 'MD5 (µs)', data: md5Times, backgroundColor: 'rgba(245, 158, 11, 0.7)' },
+          { label: 'SHA-256 (µs)', data: shaTimes, backgroundColor: 'rgba(16, 185, 129, 0.7)' }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: { title: { display: true, text: 'Execution Time (µs)' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+
+    showToast('Hash benchmark completed and persisted to SQLite!', 'success');
+  } catch (e) {}
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  executeTextHash();
+});
+</script>
+{% endblock %}

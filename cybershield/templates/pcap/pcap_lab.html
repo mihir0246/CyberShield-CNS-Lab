@@ -1,0 +1,353 @@
+{% extends "base.html" %}
+{% block title %}Experiment 6: Wireshark & Packet Analysis{% endblock %}
+{% block page_title %}Experiment 6: Wireshark & Packet Analysis (Scapy PCAP Parser){% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}" class="text-muted text-decoration-none">Laboratories</a></li>
+<li class="breadcrumb-item active text-cyan" aria-current="page">Packet Analysis</li>
+{% endblock %}
+
+{% block content %}
+<div class="cyber-card mb-4 p-3 bg-navy-light">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div>
+      <span class="badge bg-info text-dark fw-bold me-2">SYLLABUS EXP 6</span>
+      <span class="text-white fw-bold">Deep Packet Inspection (DPI), Protocol Demultiplexing, and Promiscuous Mode Analysis</span>
+    </div>
+    <div class="d-flex gap-2">
+      <button id="btn-load-sample" class="btn btn-sm btn-cyber-primary" onclick="loadSamplePcap()">
+        <i class="bi bi-file-earmark-play me-1"></i> Load Sample Lab PCAP
+      </button>
+      <button class="btn btn-sm btn-cyber-outline" data-bs-toggle="modal" data-bs-target="#promiscuousModal">
+        <i class="bi bi-info-circle me-1"></i> Promiscuous Mode Guide
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Upload & Telemetry Summary -->
+<div class="row g-4 mb-4">
+  <div class="col-lg-4">
+    <div class="cyber-card p-4 h-100">
+      <h5 class="fw-bold text-white mb-3"><i class="bi bi-upload me-2 text-cyan"></i>PCAP Upload</h5>
+      <div class="mb-3">
+        <label class="form-label">Select Capture File (.pcap, .pcapng)</label>
+        <input type="file" id="pcap-file-input" class="form-control" accept=".pcap,.pcapng,.cap">
+      </div>
+      <button id="btn-upload-pcap" class="btn btn-cyber-outline w-100 mb-3" onclick="uploadPcap()">
+        <i class="bi bi-search me-1"></i> Parse & Ingest Packets
+      </button>
+
+      <div class="p-3 rounded bg-navy-light border border-subtle" style="font-size: 0.8rem;">
+        <div class="d-flex justify-content-between mb-1">
+          <span class="text-muted">Total Packets:</span>
+          <span id="metric-total-pkts" class="text-white font-monospace">--</span>
+        </div>
+        <div class="d-flex justify-content-between mb-1">
+          <span class="text-muted">Duration:</span>
+          <span id="metric-duration" class="text-cyan font-monospace">-- sec</span>
+        </div>
+        <div class="d-flex justify-content-between">
+          <span class="text-muted">Loaded File:</span>
+          <span id="metric-filename" class="text-teal text-truncate font-monospace" style="max-width: 150px;">None</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Protocol Distribution Doughnut -->
+  <div class="col-lg-4">
+    <div class="cyber-card p-4 h-100">
+      <h5 class="fw-bold text-white mb-3"><i class="bi bi-pie-chart me-2 text-teal"></i>Protocol Distribution</h5>
+      <div style="height: 180px; position: relative;">
+        <canvas id="protocolDoughnutChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Talkers -->
+  <div class="col-lg-4">
+    <div class="cyber-card p-4 h-100">
+      <h5 class="fw-bold text-white mb-3"><i class="bi bi-diagram-3 me-2 text-warning"></i>Top IP Talkers</h5>
+      <div class="table-responsive" style="max-height: 180px;">
+        <table class="table table-cyber table-sm mb-0">
+          <thead>
+            <tr>
+              <th>Host IP</th>
+              <th>Frames</th>
+            </tr>
+          </thead>
+          <tbody id="top-talkers-body">
+            <tr><td colspan="2" class="text-muted text-center py-3">Load PCAP to identify top endpoints.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Packet Grid & Filters -->
+<div class="cyber-card p-4 mb-4">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    <h5 class="fw-bold text-white mb-0"><i class="bi bi-table me-2 text-cyan"></i>Dissected Frames Stream</h5>
+    <div class="d-flex gap-2">
+      <button class="btn btn-sm btn-cyber-outline" onclick="exportCsv()">
+        <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export Filtered CSV
+      </button>
+    </div>
+  </div>
+
+  <!-- Filters Row -->
+  <div class="row g-2 mb-3 p-3 rounded bg-navy-light border border-subtle">
+    <div class="col-sm-3">
+      <label class="form-label" style="font-size: 0.75rem;">Protocol Filter</label>
+      <select id="filter-proto" class="form-select form-select-sm" onchange="applyFilters()">
+        <option value="ALL">All Protocols</option>
+        <option value="TCP">TCP</option>
+        <option value="UDP">UDP</option>
+        <option value="HTTP">HTTP</option>
+        <option value="DNS">DNS</option>
+        <option value="ICMP">ICMP</option>
+      </select>
+    </div>
+    <div class="col-sm-3">
+      <label class="form-label" style="font-size: 0.75rem;">IP Address (Src/Dst)</label>
+      <input type="text" id="filter-ip" class="form-control form-control-sm font-monospace" placeholder="e.g. 192.168.1.105" oninput="applyFilters()">
+    </div>
+    <div class="col-sm-3">
+      <label class="form-label" style="font-size: 0.75rem;">Port Number</label>
+      <input type="text" id="filter-port" class="form-control form-control-sm font-monospace" placeholder="e.g. 80, 443" oninput="applyFilters()">
+    </div>
+    <div class="col-sm-3">
+      <label class="form-label" style="font-size: 0.75rem;">TCP Flag</label>
+      <select id="filter-flag" class="form-select form-select-sm" onchange="applyFilters()">
+        <option value="">Any Flag</option>
+        <option value="SYN">SYN (Connection Request)</option>
+        <option value="ACK">ACK (Acknowledgment)</option>
+        <option value="FIN">FIN (Session Teardown)</option>
+        <option value="RST">RST (Connection Reset)</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Packet Table -->
+  <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+    <table class="table table-cyber table-sm mb-0">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Time (s)</th>
+          <th>Source IP</th>
+          <th>Port</th>
+          <th>Destination IP</th>
+          <th>Port</th>
+          <th>Protocol</th>
+          <th>Len</th>
+          <th>Flags</th>
+          <th>Summary Info</th>
+        </tr>
+      </thead>
+      <tbody id="packets-table-body">
+        <tr>
+          <td colspan="10" class="text-center text-muted py-4">
+            <i class="bi bi-inbox fs-3 d-block mb-1 text-dim"></i>
+            Click 'Load Sample Lab PCAP' or upload an existing capture file to begin inspection.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal: Promiscuous Mode Comparison -->
+<div class="modal fade" id="promiscuousModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content cyber-card border-teal">
+      <div class="cyber-card-header">
+        <h5 class="modal-title text-white fw-bold"><i class="bi bi-eye text-teal me-2"></i>Promiscuous vs Non-Promiscuous Capture Modes</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="cyber-card-body">
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <div class="p-3 rounded bg-navy-light border border-subtle h-100">
+              <h6 class="text-info fw-bold mb-2">Standard / Non-Promiscuous Mode</h6>
+              <p class="text-muted" style="font-size: 0.85rem;">
+                NIC hardware filters incoming Ethernet frames. Frames not addressed to the host's unicast MAC address (or broadcast/multicast) are discarded at the physical PHY layer.
+              </p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="p-3 rounded bg-navy-light border border-teal h-100">
+              <h6 class="text-teal fw-bold mb-2">Promiscuous Mode</h6>
+              <p class="text-muted" style="font-size: 0.85rem;">
+                NIC passes all frames on the physical wire up to the kernel packet filter driver (Npcap / WinPcap / libpcap).
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="alert alert-warning bg-warning bg-opacity-10 border-0 text-warning" style="font-size: 0.85rem;">
+          <i class="bi bi-exclamation-triangle-fill me-1"></i>
+          <strong>Critical Network Reality:</strong> On modern switched LANs, Ethernet switches direct unicast traffic only to the recipient's specific switch port based on CAM tables. Thus, promiscuous mode on a normal host will <em>not</em> capture other workstations' traffic unless port mirroring (SPAN), a network TAP, or ARP cache poisoning is used.
+        </div>
+
+        <h6 class="text-white fw-bold mb-2">Wireshark Analysis Instructions</h6>
+        <ol class="text-muted ps-3 mb-0" style="font-size: 0.85rem;">
+          <li class="mb-1">Install Wireshark with Npcap on Windows or <code>sudo apt install wireshark</code> on Ubuntu/WSL.</li>
+          <li class="mb-1">Open CyberShield's sample PCAP from <code class="text-cyan">samples/sample_capture.pcap</code> in Wireshark.</li>
+          <li class="mb-1">Apply display filter <code class="text-cyan">http || dns</code> to isolate web transactions.</li>
+          <li>Right-click TCP packet #3 and click <strong>Follow &rarr; TCP Stream</strong> to observe full HTTP dialogue.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let allPackets = [];
+let protoChart = null;
+
+async function loadSamplePcap() {
+  const btn = document.getElementById('btn-load-sample');
+  try {
+    const res = await apiCall('{{ url_for("pcap.load_sample") }}', null, btn, 'POST');
+    renderPcapData(res.data, res.filename);
+    showToast('Loaded sample PCAP with 13 packets!', 'success');
+  } catch (e) {}
+}
+
+async function uploadPcap() {
+  const input = document.getElementById('pcap-file-input');
+  if (!input.files.length) {
+    showToast('Please select a PCAP file to upload!', 'warning');
+    return;
+  }
+  const btn = document.getElementById('btn-upload-pcap');
+  const formData = new FormData();
+  formData.append('file', input.files[0]);
+
+  try {
+    const res = await apiCall('{{ url_for("pcap.upload_pcap") }}', formData, btn, 'POST');
+    renderPcapData(res.data, res.filename);
+    showToast(`Parsed ${res.data.total_packets} packets from ${res.filename}!`, 'success');
+  } catch (e) {}
+}
+
+function renderPcapData(data, filename) {
+  allPackets = data.packets || [];
+  document.getElementById('metric-total-pkts').innerText = data.total_packets;
+  document.getElementById('metric-duration').innerText = `${data.duration_seconds} sec`;
+  document.getElementById('metric-filename').innerText = filename;
+
+  // Render Top Talkers
+  const talkersTbody = document.getElementById('top-talkers-body');
+  talkersTbody.innerHTML = '';
+  (data.top_talkers || []).forEach(t => {
+    talkersTbody.innerHTML += `<tr>
+      <td class="font-monospace text-cyan">${t.ip}</td>
+      <td class="font-monospace text-white">${t.count}</td>
+    </tr>`;
+  });
+
+  // Render Protocol Chart
+  const protoCounts = data.protocol_distribution || {};
+  const labels = Object.keys(protoCounts);
+  const counts = Object.values(protoCounts);
+
+  const ctx = document.getElementById('protocolDoughnutChart').getContext('2d');
+  if (protoChart) protoChart.destroy();
+  protoChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: counts,
+        backgroundColor: [
+          '#06b6d4', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'
+        ],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 10, color: '#94a3b8', font: { size: 10 } } }
+      }
+    }
+  });
+
+  applyFilters();
+}
+
+async function applyFilters() {
+  if (!allPackets.length) return;
+  const proto = document.getElementById('filter-proto').value;
+  const ip = document.getElementById('filter-ip').value;
+  const port = document.getElementById('filter-port').value;
+  const flag = document.getElementById('filter-flag').value;
+
+  try {
+    const res = await apiCall('{{ url_for("pcap.filter_packets_route") }}', {
+      packets: allPackets,
+      protocol: proto,
+      ip: ip,
+      port: port,
+      flag: flag
+    });
+
+    renderPacketRows(res.filtered_packets);
+  } catch (e) {}
+}
+
+function renderPacketRows(packets) {
+  const tbody = document.getElementById('packets-table-body');
+  tbody.innerHTML = '';
+
+  if (!packets.length) {
+    tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-3">No packets matched filter criteria.</td></tr>';
+    return;
+  }
+
+  packets.forEach(p => {
+    tbody.innerHTML += `<tr>
+      <td class="text-cyan fw-bold">${p.number}</td>
+      <td class="text-muted font-monospace">${p.rel_time}s</td>
+      <td class="font-monospace text-white">${p.src_ip}</td>
+      <td class="font-monospace text-dim">${p.src_port}</td>
+      <td class="font-monospace text-white">${p.dst_ip}</td>
+      <td class="font-monospace text-dim">${p.dst_port}</td>
+      <td><span class="badge bg-navy-light text-cyan border border-subtle">${p.protocol}</span></td>
+      <td class="text-muted font-monospace">${p.length}B</td>
+      <td class="font-monospace text-warning">${p.tcp_flags}</td>
+      <td class="text-truncate text-dim" style="max-width: 220px;" title="${p.info}">${p.info}</td>
+    </tr>`;
+  });
+}
+
+async function exportCsv() {
+  if (!allPackets.length) {
+    showToast('No packets to export!', 'warning');
+    return;
+  }
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = '{{ url_for("pcap.export_csv_route") }}';
+  const hidden = document.createElement('input');
+  hidden.type = 'hidden';
+  hidden.name = 'packets';
+  hidden.value = JSON.stringify(allPackets);
+  form.appendChild(hidden);
+  document.body.appendChild(form);
+  form.submit();
+  form.remove();
+}
+
+// Auto load sample on start
+document.addEventListener('DOMContentLoaded', () => {
+  loadSamplePcap();
+});
+</script>
+{% endblock %}
