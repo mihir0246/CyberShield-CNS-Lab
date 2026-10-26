@@ -42,7 +42,17 @@ class SnortService:
 
     @staticmethod
     def get_snort_path() -> Optional[str]:
-        return shutil.which("snort")
+        p = shutil.which("snort")
+        if p:
+            return p
+        for candidate in [
+            r"C:\Snort\bin\snort.exe",
+            r"C:\Program Files\Snort\bin\snort.exe",
+            r"C:\Program Files (x86)\Snort\bin\snort.exe",
+        ]:
+            if Path(candidate).is_file():
+                return candidate
+        return None
 
     @classmethod
     def check_snort_installation(cls) -> Dict[str, Any]:

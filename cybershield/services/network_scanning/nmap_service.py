@@ -23,7 +23,17 @@ class NmapService:
 
     @staticmethod
     def get_nmap_path() -> Optional[str]:
-        return shutil.which("nmap")
+        p = shutil.which("nmap")
+        if p:
+            return p
+        for candidate in [
+            r"C:\Program Files (x86)\Nmap\nmap.exe",
+            r"C:\Program Files\Nmap\nmap.exe",
+            r"C:\Nmap\nmap.exe",
+        ]:
+            if Path(candidate).is_file():
+                return candidate
+        return None
 
     @classmethod
     def check_nmap_installation(cls) -> Dict[str, Any]:
