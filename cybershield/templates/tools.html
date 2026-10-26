@@ -56,19 +56,25 @@
             <small class="text-muted">Signature-based packet inspection</small>
           </div>
         </div>
-        <span class="badge {{ 'bg-success' if snort.installed else 'bg-secondary' }}">
-          {{ 'Installed' if snort.installed else 'Missing Sensor' }}
+        <span class="badge {{ 'bg-success' if snort.installed else ('bg-info text-dark' if alerts_count > 0 else 'bg-secondary') }}">
+          {{ 'Installed & Live' if snort.installed else ('Log Engine (' ~ alerts_count ~ ' Alerts Seeded)' if alerts_count > 0 else 'Missing Sensor') }}
         </span>
       </div>
 
       <div class="p-3 mb-3 rounded bg-navy-light border border-subtle" style="font-size: 0.85rem;">
-        <div class="mb-1"><strong class="text-muted">Detected Version:</strong> <span class="text-white font-monospace">{{ snort.version or 'Not Available' }}</span></div>
-        <div class="mb-1"><strong class="text-muted">Binary Path:</strong> <code class="text-info">{{ snort.binary_path or 'Not Found on System PATH' }}</code></div>
-        <div><strong class="text-muted">Active Sensor Status:</strong> <span class="text-warning">Standby / Offline Log Parsing Mode</span></div>
+        <div class="mb-1"><strong class="text-muted">Detected Version:</strong> <span class="text-white font-monospace">{{ snort.version or 'Offline Log Ingestion Mode' }}</span></div>
+        <div class="mb-1"><strong class="text-muted">Binary Path:</strong> <code class="text-info">{{ snort.binary_path or 'Parsed Internal Signature Engine' }}</code></div>
+        <div><strong class="text-muted">Active Sensor Status:</strong> <span class="{{ 'text-success' if alerts_count > 0 else 'text-warning' }}">{{ alerts_count ~ ' Ingested Alerts Ready in Database' if alerts_count > 0 else 'Standby / Offline Log Parsing Mode' }}</span></div>
       </div>
 
+      {% if alerts_count > 0 %}
+      <div class="alert alert-info bg-info bg-opacity-10 border-0 text-info py-2 px-3 mb-3" style="font-size: 0.85rem;">
+        <i class="bi bi-shield-check me-1"></i> Snort alert log dataset is active with <strong>{{ alerts_count }} parsed security alerts</strong> ready for IDS exploration and cross-telemetry correlation.
+      </div>
+      {% endif %}
+
       {% if not snort.installed %}
-      <h6 class="text-white fw-bold mb-2">Setup Guide</h6>
+      <h6 class="text-white fw-bold mb-2">Live Sensor Installation Guide</h6>
       <ul class="text-dim ps-3 mb-0" style="font-size: 0.8rem;">
         {% for ins in snort.instructions %}
         <li>{{ ins }}</li>

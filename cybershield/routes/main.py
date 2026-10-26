@@ -47,30 +47,35 @@ def dashboard():
             "available": wireshark_status.get("installed", False),
             "version": f"v{wireshark_status.get('version', '')}" if wireshark_status.get("installed") else "Not Installed",
             "status_badge": "bg-success" if wireshark_status.get("installed") else "bg-secondary",
+            "status_text": "Ready" if wireshark_status.get("installed") else "Fallback Mode",
         },
         "nmap": {
             "name": "Nmap Network Scanner",
             "available": nmap_status.get("installed", False),
-            "version": nmap_status.get("version", "Not Installed"),
+            "version": nmap_status.get("version") or "Not Installed",
             "status_badge": "bg-success" if nmap_status.get("installed") else "bg-secondary",
+            "status_text": "Ready" if nmap_status.get("installed") else "Fallback Mode",
         },
         "snort": {
             "name": "Snort IDS Sensor",
-            "available": snort_status.get("installed", False),
-            "version": snort_status.get("version", "Not Installed"),
-            "status_badge": "bg-success" if snort_status.get("installed") else "bg-secondary",
+            "available": snort_status.get("installed", False) or alerts_count > 0,
+            "version": snort_status.get("version") or (f"{alerts_count} Alerts Loaded" if alerts_count > 0 else "Log Ingestion Mode"),
+            "status_badge": "bg-success" if snort_status.get("installed") else ("bg-info" if alerts_count > 0 else "bg-secondary"),
+            "status_text": "Daemon Ready" if snort_status.get("installed") else ("Logs Ingested" if alerts_count > 0 else "Fallback Mode"),
         },
         "scapy": {
             "name": "Scapy Packet Engine",
             "available": True,
             "version": "2.6.1 (Npcap Active)" if wireshark_status.get("npcap_driver_active") else "2.6.1",
             "status_badge": "bg-success",
+            "status_text": "Ready",
         },
         "cryptography": {
             "name": "Python Cryptography Engine",
             "available": True,
             "version": "44.0.2",
             "status_badge": "bg-success",
+            "status_text": "Ready",
         },
     }
 
@@ -117,6 +122,7 @@ def tools_page():
     snort_status = SnortService.check_snort_installation()
     capture_info = PcapService.get_capture_mode_info()
     wireshark_status = PcapService.check_wireshark_installation()
+    alerts_count = SnortAlertModel.query.count()
 
     return render_template(
         "tools.html",
@@ -124,6 +130,7 @@ def tools_page():
         snort=snort_status,
         capture=capture_info,
         wireshark=wireshark_status,
+        alerts_count=alerts_count,
         python_version=platform.python_version(),
         os_name=platform.platform(),
     )

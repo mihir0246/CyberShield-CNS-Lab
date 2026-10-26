@@ -152,7 +152,7 @@
               <small class="text-muted" style="font-size: 0.75rem;">{{ tool.version }}</small>
             </div>
           </div>
-          <span class="badge {{ tool.status_badge }}">{{ 'Ready' if tool.available else 'Fallback Mode' }}</span>
+          <span class="badge {{ tool.status_badge }}">{{ tool.status_text or ('Ready' if tool.available else 'Fallback Mode') }}</span>
         </div>
         {% endfor %}
         <div class="mt-3 p-2 rounded bg-dark border border-secondary" style="font-size: 0.75rem;">
