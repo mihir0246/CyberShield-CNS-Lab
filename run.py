@@ -22,7 +22,7 @@ if __name__ == "__main__":
     debug = os.getenv("DEBUG", "true").lower() in ("true", "1", "yes")
 
     print("=" * 70)
-    print("   🛡️  CYBERSHIELD: INTEGRATED CNS LABORATORY SERVER")
+    print("   [+] CYBERSHIELD: INTEGRATED CNS LABORATORY SERVER")
     print("=" * 70)
     print(f" * Laboratory URL:    http://{host}:{port}/")
     print(f" * Documentation:     http://{host}:{port}/docs/")
