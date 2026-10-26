@@ -79,6 +79,48 @@
         <i class="bi bi-check-circle-fill me-1"></i> Snort binary verified. Use rule explainer or ingest fast-alert logs.
       </div>
       {% endif %}
+  </div>
+</div>
+
+<!-- Wireshark & TShark Card -->
+<div class="row g-4 mb-4">
+  <div class="col-12">
+    <div class="cyber-card p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex align-items-center">
+          <i class="bi bi-reception-4 text-primary fs-3 me-2"></i>
+          <div>
+            <h5 class="fw-bold text-white mb-0">Wireshark & TShark Dissector</h5>
+            <small class="text-muted">Deep packet inspection, network telemetry & Npcap driver</small>
+          </div>
+        </div>
+        <span class="badge {{ 'bg-success' if wireshark.installed else 'bg-warning text-dark' }}">
+          {{ 'Operational (Npcap Ready)' if wireshark.installed else 'Missing' }}
+        </span>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-md-4">
+          <div class="p-3 rounded bg-navy-light border border-subtle">
+            <strong class="text-muted d-block" style="font-size: 0.75rem;">DETECTED VERSION</strong>
+            <span class="text-white font-monospace fw-bold">{{ wireshark.version }}</span>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="p-3 rounded bg-navy-light border border-subtle">
+            <strong class="text-muted d-block" style="font-size: 0.75rem;">WIRESHARK GUI PATH</strong>
+            <code class="text-info text-truncate d-block" style="font-size: 0.8rem;">{{ wireshark.wireshark_path or 'Not Linked' }}</code>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="p-3 rounded bg-navy-light border border-subtle">
+            <strong class="text-muted d-block" style="font-size: 0.75rem;">NPCAP DRIVER STATUS</strong>
+            <span class="badge {{ 'bg-success' if wireshark.npcap_driver_active else 'bg-secondary' }}">
+              {{ 'Active & Linked to Scapy' if wireshark.npcap_driver_active else 'Inactive' }}
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>

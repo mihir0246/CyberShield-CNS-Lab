@@ -39,8 +39,15 @@ def dashboard():
     nmap_status = NmapService.check_nmap_installation()
     snort_status = SnortService.check_snort_installation()
     capture_info = PcapService.get_capture_mode_info()
+    wireshark_status = PcapService.check_wireshark_installation()
 
     tools_summary = {
+        "wireshark": {
+            "name": "Wireshark & TShark",
+            "available": wireshark_status.get("installed", False),
+            "version": f"v{wireshark_status.get('version', '')}" if wireshark_status.get("installed") else "Not Installed",
+            "status_badge": "bg-success" if wireshark_status.get("installed") else "bg-secondary",
+        },
         "nmap": {
             "name": "Nmap Network Scanner",
             "available": nmap_status.get("installed", False),
@@ -56,7 +63,7 @@ def dashboard():
         "scapy": {
             "name": "Scapy Packet Engine",
             "available": True,
-            "version": "2.6.1",
+            "version": "2.6.1 (Npcap Active)" if wireshark_status.get("npcap_driver_active") else "2.6.1",
             "status_badge": "bg-success",
         },
         "cryptography": {
@@ -109,12 +116,14 @@ def tools_page():
     nmap_status = NmapService.check_nmap_installation()
     snort_status = SnortService.check_snort_installation()
     capture_info = PcapService.get_capture_mode_info()
+    wireshark_status = PcapService.check_wireshark_installation()
 
     return render_template(
         "tools.html",
         nmap=nmap_status,
         snort=snort_status,
         capture=capture_info,
+        wireshark=wireshark_status,
         python_version=platform.python_version(),
         os_name=platform.platform(),
     )
@@ -125,6 +134,7 @@ def health_check():
     """JSON health check endpoint."""
     nmap_ok = NmapService.check_nmap_installation().get("installed", False)
     snort_ok = SnortService.check_snort_installation().get("installed", False)
+    ws_ok = PcapService.check_wireshark_installation().get("installed", False)
 
     return jsonify({
         "status": "healthy",
@@ -137,6 +147,7 @@ def health_check():
         "tools": {
             "nmap_installed": nmap_ok,
             "snort_installed": snort_ok,
+            "wireshark_installed": ws_ok,
             "scapy_ready": True,
             "cryptography_ready": True,
         },
